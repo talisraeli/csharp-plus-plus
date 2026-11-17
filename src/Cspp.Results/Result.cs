@@ -6,7 +6,7 @@ namespace Cspp.Results;
 [Union]
 public readonly record struct Result : IUnion
 {
-    private readonly Error? error;
+    private readonly Failure? failure;
     private readonly ResultType type;
 
     public Result(Success success)
@@ -14,13 +14,13 @@ public readonly record struct Result : IUnion
         type = ResultType.Success;
     }
 
-    public Result(Error error)
+    public Result(Failure failure)
     {
-        this.error = error;
+        this.failure = failure;
         type = ResultType.Failure;
     }
 
-    public object? Value => IsSuccess ? Success.Instance : Error;
+    public object? Value => IsSuccess ? Success.Instance : Failure;
 
     public bool HasValue => true;
 
@@ -28,7 +28,7 @@ public readonly record struct Result : IUnion
 
     public bool IsFailure => type == ResultType.Failure;
 
-    internal Error Error => error ?? Error.Uninitialized;
+    internal Failure Failure => failure ?? Failure.Uninitialized;
 
     public bool TryGetValue([NotNullWhen(true)] out Success? success)
     {
@@ -36,9 +36,9 @@ public readonly record struct Result : IUnion
         return IsSuccess;
     }
 
-    public bool TryGetValue([NotNullWhen(true)] out Error? error)
+    public bool TryGetValue([NotNullWhen(true)] out Failure? failure)
     {
-        error = IsFailure ? Error : null;
+        failure = IsFailure ? Failure : null;
         return IsFailure;
     }
 }
@@ -55,13 +55,13 @@ public readonly record struct Result<T> : IUnion
         state = Success.Instance;
     }
 
-    public Result(Error error)
+    public Result(Failure failure)
     {
         value = default!;
-        state = error;
+        state = failure;
     }
 
-    public object? Value => IsSuccess ? value : state.Error;
+    public object? Value => IsSuccess ? value : state.Failure;
 
     public bool HasValue => true;
 
@@ -75,8 +75,8 @@ public readonly record struct Result<T> : IUnion
         return IsSuccess;
     }
 
-    public bool TryGetValue([NotNullWhen(true)] out Error? error)
+    public bool TryGetValue([NotNullWhen(true)] out Failure? failure)
     {
-        return state.TryGetValue(out error);
+        return state.TryGetValue(out failure);
     }
 }

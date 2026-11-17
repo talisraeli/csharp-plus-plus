@@ -31,9 +31,9 @@ public class ResultTests
     }
 
     [Test]
-    public void ImplicitConversion_FromError_ReturnsFailureResult()
+    public void ImplicitConversion_FromFailure_ReturnsFailureResult()
     {
-        Result result = Error.Unknown;
+        Result result = Failure.Unknown;
 
         using (Assert.EnterMultipleScope())
         {
@@ -43,7 +43,7 @@ public class ResultTests
     }
 
     [Test]
-    public void TryGetValue_OnSuccess_ReturnsSuccessAndNoError()
+    public void TryGetValue_OnSuccess_ReturnsSuccessAndNoFailure()
     {
         Result result = Result.Success;
 
@@ -51,28 +51,28 @@ public class ResultTests
         {
             Assert.That(result.TryGetValue(out Success? success), Is.True);
             Assert.That(success, Is.SameAs(Success.Instance));
-            Assert.That(result.TryGetValue(out Error? error), Is.False);
-            Assert.That(error, Is.Null);
+            Assert.That(result.TryGetValue(out Failure? failure), Is.False);
+            Assert.That(failure, Is.Null);
         }
     }
 
     [Test]
-    public void TryGetValue_OnFailure_ReturnsErrorAndNoSuccess()
+    public void TryGetValue_OnFailure_ReturnsFailureAndNoSuccess()
     {
-        Error inError = new("Test.Code", "Test message");
-        Result result = inError;
+        Failure inFailure = new("Test.Code", "Test error");
+        Result result = inFailure;
 
         using (Assert.EnterMultipleScope())
         {
             Assert.That(result.TryGetValue(out Success? success), Is.False);
             Assert.That(success, Is.Null);
-            Assert.That(result.TryGetValue(out Error? outError), Is.True);
-            Assert.That(outError, Is.EqualTo(inError));
+            Assert.That(result.TryGetValue(out Failure? outFailure), Is.True);
+            Assert.That(outFailure, Is.EqualTo(inFailure));
         }
     }
 
     [Test]
-    public void Default_WhenCreated_IsFailureWithUninitializedError()
+    public void Default_WhenCreated_IsUninitializedFailure()
     {
         Result result = default;
 
@@ -80,31 +80,31 @@ public class ResultTests
         {
             Assert.That(result.IsFailure, Is.True);
             Assert.That(result.HasValue, Is.True);
-            Assert.That(result.Value, Is.EqualTo(Error.Uninitialized));
-            Assert.That(result.TryGetValue(out Error? error), Is.True);
-            Assert.That(error, Is.EqualTo(Error.Uninitialized));
+            Assert.That(result.Value, Is.EqualTo(Failure.Uninitialized));
+            Assert.That(result.TryGetValue(out Failure? failure), Is.True);
+            Assert.That(failure, Is.EqualTo(Failure.Uninitialized));
         }
     }
 
     [Test]
-    public void Switch_OnDefault_MatchesUninitializedError()
+    public void Switch_OnDefault_MatchesUninitializedFailure()
     {
         Result result = default;
 
         string code = result switch
         {
             Success => "success",
-            Error error => error.Code,
+            Failure failure => failure.Code,
         };
 
-        Assert.That(code, Is.EqualTo(Error.Uninitialized.Code));
+        Assert.That(code, Is.EqualTo(Failure.Uninitialized.Code));
     }
 
     [Test]
-    public void Equals_SameError_ReturnsTrue()
+    public void Equals_SameFailure_ReturnsTrue()
     {
-        Result first = Error.Unknown;
-        Result second = Error.Unknown;
+        Result first = Failure.Unknown;
+        Result second = Failure.Unknown;
 
         Assert.That(first, Is.EqualTo(second));
     }
@@ -143,8 +143,8 @@ public class ResultTests
             var count = 0;
             for (var i = 0; i < iterations; i++)
             {
-                Result result = Error.Unknown;
-                if (result is Error && result.IsFailure)
+                Result result = Failure.Unknown;
+                if (result is Failure && result.IsFailure)
                 {
                     count++;
                 }

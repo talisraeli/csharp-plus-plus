@@ -11,42 +11,42 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace Cspp.Results.Tests;
 
 [TestFixture]
-[TestSubject(typeof(ResultOfErrorAnalyzer))]
-public class ResultOfErrorAnalyzerTests
+[TestSubject(typeof(ResultOfFailureAnalyzer))]
+public class ResultOfFailureAnalyzerTests
 {
-    [TestCase("Result<Error> result = default;")]
-    [TestCase("Result<Error?> result = default;")]
-    [TestCase("Result<ValidationError> result = default;")]
-    [TestCase("System.Collections.Generic.List<Result<Error>> results = new();")]
-    public async Task Analyze_ResultOfErrorType_ReportsDiagnostic(string statement)
+    [TestCase("Result<Failure> result = default;")]
+    [TestCase("Result<Failure?> result = default;")]
+    [TestCase("Result<ValidationFailure> result = default;")]
+    [TestCase("System.Collections.Generic.List<Result<Failure>> results = new();")]
+    public async Task Analyze_ResultOfFailureType_ReportsDiagnostic(string statement)
     {
         ImmutableArray<Diagnostic> diagnostics = await AnalyzeAsync(statement);
 
-        Assert.That(diagnostics.Select(diagnostic => diagnostic.Id), Is.EqualTo(new[] { ResultOfErrorAnalyzer.DiagnosticId }));
+        Assert.That(diagnostics.Select(diagnostic => diagnostic.Id), Is.EqualTo(new[] { ResultOfFailureAnalyzer.DiagnosticId }));
     }
 
     [Test]
-    public async Task Analyze_TypeParameterConstrainedToError_ReportsDiagnostic()
+    public async Task Analyze_TypeParameterConstrainedToFailure_ReportsDiagnostic()
     {
         const string source = """
             using Cspp.Results;
 
             public static class Sample
             {
-                public static Result<TError> Wrap<TError>(TError error) where TError : Error => default;
+                public static Result<TFailure> Wrap<TFailure>(TFailure failure) where TFailure : Failure => default;
             }
             """;
 
         ImmutableArray<Diagnostic> diagnostics = await AnalyzeSourceAsync(source);
 
-        Assert.That(diagnostics.Select(diagnostic => diagnostic.Id), Is.EqualTo(new[] { ResultOfErrorAnalyzer.DiagnosticId }));
+        Assert.That(diagnostics.Select(diagnostic => diagnostic.Id), Is.EqualTo(new[] { ResultOfFailureAnalyzer.DiagnosticId }));
     }
 
     [TestCase("Result<int> result = default;")]
     [TestCase("Result<string?> result = default;")]
     [TestCase("Result<object> result = default;")]
     [TestCase("Result result = default;")]
-    public async Task Analyze_ResultOfNonErrorType_ReportsNothing(string statement)
+    public async Task Analyze_ResultOfNonFailureType_ReportsNothing(string statement)
     {
         ImmutableArray<Diagnostic> diagnostics = await AnalyzeAsync(statement);
 
@@ -58,7 +58,7 @@ public class ResultOfErrorAnalyzerTests
         return AnalyzeSourceAsync($$"""
             using Cspp.Results;
 
-            public sealed record ValidationError(string Code, string Message) : Error(Code, Message);
+            public sealed record ValidationFailure(string Code, string Error) : Failure(Code, Error);
 
             public static class Sample
             {
@@ -85,7 +85,7 @@ public class ResultOfErrorAnalyzerTests
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable));
 
         return await compilation
-            .WithAnalyzers([new ResultOfErrorAnalyzer()])
+            .WithAnalyzers([new ResultOfFailureAnalyzer()])
             .GetAnalyzerDiagnosticsAsync();
     }
 }

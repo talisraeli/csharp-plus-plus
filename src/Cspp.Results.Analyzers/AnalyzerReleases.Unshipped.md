@@ -5,4 +5,4 @@
 
 Rule ID  | Category | Severity | Notes
 ---------|----------|----------|------------------------------------------------
-CSPP0001 | Usage    | Error    | Result<T> value type must not be or derive from Error
+CSPP0001 | Usage    | Error    | Result<T> value type must not be or derive from Failure

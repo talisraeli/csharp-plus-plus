@@ -8,25 +8,25 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace Cspp.Results.Analyzers;
 
 /// <summary>
-/// Reports <c>Result&lt;T&gt;</c> where <c>T</c> is or derives from <c>Error</c>. Such a type cannot tell its success
-/// value apart from its failure, because both cases convert from an <c>Error</c>.
+/// Reports <c>Result&lt;T&gt;</c> where <c>T</c> is or derives from <c>Failure</c>. Such a type cannot tell its success
+/// value apart from its failure, because both cases convert from a <c>Failure</c>.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
-public sealed class ResultOfErrorAnalyzer : DiagnosticAnalyzer
+public sealed class ResultOfFailureAnalyzer : DiagnosticAnalyzer
 {
     public const string DiagnosticId = "CSPP0001";
 
     private const string ResultMetadataName = "Cspp.Results.Result`1";
-    private const string ErrorMetadataName = "Cspp.Results.Error";
+    private const string FailureMetadataName = "Cspp.Results.Failure";
 
     private static readonly DiagnosticDescriptor Rule = new(
         DiagnosticId,
-        title: "Result<T> value type must not be an Error",
-        messageFormat: "'{0}' cannot be the value type of Result<T> because it is or derives from Cspp.Results.Error",
+        title: "Result<T> value type must not be a Failure",
+        messageFormat: "'{0}' cannot be the value type of Result<T> because it is or derives from Cspp.Results.Failure",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "Result<T> uses Error as its failure case, so a value type that is an Error makes success and failure ambiguous.");
+        description: "Result<T> uses Failure as its failure case, so a value type that is a Failure makes success and failure ambiguous.");
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
@@ -37,14 +37,14 @@ public sealed class ResultOfErrorAnalyzer : DiagnosticAnalyzer
         context.RegisterCompilationStartAction(start =>
         {
             INamedTypeSymbol? result = start.Compilation.GetTypeByMetadataName(ResultMetadataName);
-            INamedTypeSymbol? error = start.Compilation.GetTypeByMetadataName(ErrorMetadataName);
-            if (result is null || error is null)
+            INamedTypeSymbol? failure = start.Compilation.GetTypeByMetadataName(FailureMetadataName);
+            if (result is null || failure is null)
             {
                 return;
             }
 
             start.RegisterSyntaxNodeAction(
-                node => AnalyzeGenericName(node, result, error),
+                node => AnalyzeGenericName(node, result, failure),
                 SyntaxKind.GenericName);
         });
     }
@@ -52,7 +52,7 @@ public sealed class ResultOfErrorAnalyzer : DiagnosticAnalyzer
     private static void AnalyzeGenericName(
         SyntaxNodeAnalysisContext context,
         INamedTypeSymbol result,
-        INamedTypeSymbol error)
+        INamedTypeSymbol failure)
     {
         var name = (GenericNameSyntax)context.Node;
         if (name.TypeArgumentList.Arguments.Count != 1)
@@ -68,7 +68,7 @@ public sealed class ResultOfErrorAnalyzer : DiagnosticAnalyzer
         }
 
         ITypeSymbol valueType = type.TypeArguments[0];
-        if (IsOrDerivesFrom(valueType, error))
+        if (IsOrDerivesFrom(valueType, failure))
         {
             context.ReportDiagnostic(Diagnostic.Create(
                 Rule,
