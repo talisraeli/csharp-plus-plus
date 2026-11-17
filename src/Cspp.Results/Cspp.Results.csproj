@@ -2,7 +2,8 @@
 
   <PropertyGroup>
     <PackageId>Cspp.Results</PackageId>
-    <Version>0.2.0</Version>
+    <!-- Local packs only. The release workflow sets the version from the v* tag. -->
+    <Version>0.0.0</Version>
     <Authors>Tal Israeli</Authors>
     <Description>A Result type for returning success or failure without throwing exceptions, built on C# union types.</Description>
     <PackageTags>result;union;error-handling;functional</PackageTags>
