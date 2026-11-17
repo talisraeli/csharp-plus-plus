@@ -11,9 +11,9 @@ A `Result` type for returning success or failure without throwing exceptions. It
 
 | Type        | Description                                                                                                    |
 |-------------|----------------------------------------------------------------------------------------------------------------|
-| `Result`    | A union of `Success` or `Failure`.                                                                             |
-| `Result<T>` | A union of `Success<T>` (holds a `Value`) or `Failure`.                                                        |
-| `Failure`   | Holds an `Error`.                                                                                              |
+| `Result`    | A union of `Success` or `Error`.                                                                               |
+| `Result<T>` | A union of a `T` value or `Error`.                                                                             |
+| `Success`   | A singleton (`Success.Instance`) marking success for the non-generic `Result`.                                 |
 | `Error`     | A `Code` and a `Message`, neither of which can be null or whitespace. `Error.Unknown` is a predefined default. |
 
 ### Usage
@@ -23,25 +23,24 @@ using Cspp.Results;
 
 Result<int> Parse(string text) =>
     int.TryParse(text, out int value)
-        ? Result.FromValue(value)
-        : Result.FromError(new Error("Parse.Invalid", $"'{text}' is not a number."));
+        ? value
+        : new Error("Parse.Invalid", $"'{text}' is not a number.");
 
 string message = Parse("42") switch
 {
-    Success<int> success => $"Parsed {success.Value}",
-    Failure failure => $"{failure.Error.Code}: {failure.Error.Message}",
+    int value => $"Parsed {value}",
+    Error error => $"{error.Code}: {error.Message}",
 };
 ```
 
-Union pattern matching works on the case value directly, so no casting is needed. Because the union's cases are known,
-the switch is exhaustive without a discard (`_`) arm. If you only need to check which case you have, `result.IsSuccess`
-and `result.IsFailure` are also available.
+A value or an `Error` converts to `Result<T>` implicitly, and union pattern matching works on the case directly, so no
+wrapping or casting is needed. Because the union's cases are known, the switch is exhaustive without a discard (`_`)
+arm. If you only need to check which case you have, `result.IsSuccess` and `result.IsFailure` are also available, and
+`TryGetValue` gives you the case without pattern matching.
 
-For the non-generic `Result`, use the predefined `Result.Success` and `Result.Failure` (which carries `Error.Unknown`),
-or convert a `Success` or `Failure` to `Result` implicitly.
+For the non-generic `Result`, return `Result.Success` or an `Error`.
 
-`new Success<T>()` and `new Failure()` are marked obsolete and throw `InvalidOperationException`. Always pass a value or
-an error.
+A `default` result is a failure carrying `Error.Unknown`.
 
 ## Requirements
 

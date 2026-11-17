@@ -1,19 +1,10 @@
 namespace Cspp.Results;
 
-public readonly record struct Success;
-
-public readonly record struct Success<T>
+public sealed record Success
 {
-    [Obsolete("Use Success<T>(T value) constructor instead.", true)]
-    public Success()
-    {
-        throw new InvalidOperationException("None value provided.");
-    }
+    public static readonly Success Instance = new();
 
-    public Success(T value)
+    private Success()
     {
-        Value = value;
     }
-
-    public T Value { get; init; }
 }

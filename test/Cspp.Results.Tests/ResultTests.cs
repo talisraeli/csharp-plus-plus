@@ -7,81 +7,67 @@ namespace Cspp.Results.Tests;
 public class ResultTests
 {
     [Test]
+    public void Success_WhenAccessed_ReturnsSuccessResult()
+    {
+        Result result = Result.Success;
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(result.IsFailure, Is.False);
+        }
+    }
+
+    [Test]
     public void ImplicitConversion_FromSuccess_ReturnsSuccessResult()
     {
-        Result result = default(Success);
+        Result result = Success.Instance;
 
         using (Assert.EnterMultipleScope())
         {
             Assert.That(result.IsSuccess, Is.True);
             Assert.That(result.IsFailure, Is.False);
-            Assert.That(result is Success, Is.True);
         }
     }
 
     [Test]
-    public void ImplicitConversion_FromFailure_ReturnsFailureResult()
+    public void ImplicitConversion_FromError_ReturnsFailureResult()
     {
-        Result result = new Failure(Error.Unknown);
+        Result result = Error.Unknown;
 
         using (Assert.EnterMultipleScope())
         {
             Assert.That(result.IsSuccess, Is.False);
             Assert.That(result.IsFailure, Is.True);
-            Assert.That(result is Failure, Is.True);
         }
     }
 
     [Test]
-    public void Success_WhenAccessed_IsSuccessResult()
+    public void TryGetValue_OnSuccess_ReturnsSuccessAndNoError()
     {
         Result result = Result.Success;
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(result.IsSuccess, Is.True);
-            Assert.That(result.IsFailure, Is.False);
-            Assert.That(result is Success, Is.True);
+            Assert.That(result.TryGetValue(out Success? success), Is.True);
+            Assert.That(success, Is.SameAs(Success.Instance));
+            Assert.That(result.TryGetValue(out Error? error), Is.False);
+            Assert.That(error, Is.Null);
         }
     }
 
     [Test]
-    public void Failure_WhenAccessed_IsFailureWithUnknownError()
+    public void TryGetValue_OnFailure_ReturnsErrorAndNoSuccess()
     {
-        Result result = Result.Failure;
+        Error inError = new("Test.Code", "Test message");
+        Result result = inError;
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(result.IsSuccess, Is.False);
-            Assert.That(result.IsFailure, Is.True);
-            Assert.That(result is Failure, Is.True);
-            Assert.That(((Failure)result.Value!).Error, Is.EqualTo(Error.Unknown));
-        }
-    }
-
-    [Test]
-    public void TryGetValue_FromSuccess_ReturnsTrue()
-    {
-        Result result = Result.Success;
-
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.TryGetValue(out Success _), Is.True);
-            Assert.That(result.TryGetValue(out Failure _), Is.False);
-        }
-    }
-
-    [Test]
-    public void TryGetValue_FromFailure_ReturnsFailureWithError()
-    {
-        var error = new Error("Test.Code", "Test message");
-        Result result = new Failure(error);
-
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.TryGetValue(out Success _), Is.False);
-            Assert.That(result.TryGetValue(out Failure failure), Is.True);
-            Assert.That(failure.Error, Is.EqualTo(error));
+            Assert.That(result.TryGetValue(out Success? success), Is.False);
+            Assert.That(success, Is.Null);
+            Assert.That(result.TryGetValue(out Error? outError), Is.True);
+            Assert.That(outError, Is.EqualTo(inError));
         }
     }
 
@@ -94,21 +80,37 @@ public class ResultTests
         {
             Assert.That(result.IsFailure, Is.True);
             Assert.That(result.HasValue, Is.True);
-            Assert.That(result is Failure { Error: var error } && error == Error.Unknown, Is.True);
+            Assert.That(result.Value, Is.EqualTo(Error.Unknown));
+            Assert.That(result.TryGetValue(out Error? error), Is.True);
+            Assert.That(error, Is.EqualTo(Error.Unknown));
         }
     }
 
     [Test]
-    public void Equals_SameFailure_IsTrue()
+    public void Switch_OnDefault_MatchesUnknownError()
     {
-        Result first = new Failure(Error.Unknown);
-        Result second = new Failure(Error.Unknown);
+        Result result = default;
+
+        string code = result switch
+        {
+            Success => "success",
+            Error error => error.Code,
+        };
+
+        Assert.That(code, Is.EqualTo(Error.Unknown.Code));
+    }
+
+    [Test]
+    public void Equals_SameError_ReturnsTrue()
+    {
+        Result first = Error.Unknown;
+        Result second = Error.Unknown;
 
         Assert.That(first, Is.EqualTo(second));
     }
 
     [Test]
-    public void Create_SuccessAndPatternMatch_DoesNotAllocate()
+    public void PatternMatch_OnSuccess_DoesNotAllocate()
     {
         static int Run(int iterations)
         {
@@ -134,15 +136,15 @@ public class ResultTests
     }
 
     [Test]
-    public void Create_FailureAndPatternMatch_DoesNotAllocate()
+    public void PatternMatch_OnFailure_DoesNotAllocate()
     {
         static int Run(int iterations)
         {
             var count = 0;
             for (var i = 0; i < iterations; i++)
             {
-                Result result = Result.Failure;
-                if (result is Failure { Error: not null } && result.IsFailure)
+                Result result = Error.Unknown;
+                if (result is Error && result.IsFailure)
                 {
                     count++;
                 }

@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <PackageId>Cspp.Results</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>Tal Israeli</Authors>
     <Description>A Result type for returning success or failure without throwing exceptions, built on C# union types.</Description>
     <PackageTags>result;union;error-handling;functional</PackageTags>

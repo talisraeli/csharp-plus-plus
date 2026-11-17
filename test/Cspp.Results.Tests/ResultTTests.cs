@@ -7,57 +7,55 @@ namespace Cspp.Results.Tests;
 public class ResultTTests
 {
     [Test]
-    public void ImplicitConversion_FromSuccess_ReturnsSuccessWithValue()
+    public void ImplicitConversion_FromValue_ReturnsSuccessResult()
     {
-        Result<int> result = new Success<int>(42);
+        Result<int> result = 42;
 
         using (Assert.EnterMultipleScope())
         {
             Assert.That(result.IsSuccess, Is.True);
             Assert.That(result.IsFailure, Is.False);
-            Assert.That(result is Success<int>, Is.True);
-            Assert.That(((Success<int>)result.Value).Value, Is.EqualTo(42));
         }
     }
 
     [Test]
-    public void ImplicitConversion_FromFailure_ReturnsFailureWithError()
+    public void ImplicitConversion_FromError_ReturnsFailureResult()
     {
-        Result<int> result = new Failure(Error.Unknown);
+        Result<int> result = Error.Unknown;
 
         using (Assert.EnterMultipleScope())
         {
             Assert.That(result.IsSuccess, Is.False);
             Assert.That(result.IsFailure, Is.True);
-            Assert.That(result is Failure, Is.True);
-            Assert.That(((Failure)result.Value!).Error, Is.EqualTo(Error.Unknown));
         }
     }
 
     [Test]
-    public void TryGetValue_FromSuccess_ReturnsValue()
+    public void TryGetValue_OnSuccess_ReturnsValueAndNoError()
     {
-        Result<int> result = new Success<int>(42);
+        Result<int> result = 42;
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(result.TryGetValue(out Success<int> success), Is.True);
-            Assert.That(success.Value, Is.EqualTo(42));
-            Assert.That(result.TryGetValue(out Failure _), Is.False);
+            Assert.That(result.TryGetValue(out int value), Is.True);
+            Assert.That(value, Is.EqualTo(42));
+            Assert.That(result.TryGetValue(out Error? error), Is.False);
+            Assert.That(error, Is.Null);
         }
     }
 
     [Test]
-    public void TryGetValue_FromFailure_ReturnsFailureWithError()
+    public void TryGetValue_OnFailure_ReturnsErrorAndNoValue()
     {
-        var error = new Error("Test.Code", "Test message");
-        Result<int> result = new Failure(error);
+        Error inError = new("Test.Code", "Test message");
+        Result<string> result = inError;
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(result.TryGetValue(out Success<int> _), Is.False);
-            Assert.That(result.TryGetValue(out Failure failure), Is.True);
-            Assert.That(failure.Error, Is.EqualTo(error));
+            Assert.That(result.TryGetValue(out string? value), Is.False);
+            Assert.That(value, Is.Null);
+            Assert.That(result.TryGetValue(out Error? outError), Is.True);
+            Assert.That(outError, Is.EqualTo(inError));
         }
     }
 
@@ -70,31 +68,47 @@ public class ResultTTests
         {
             Assert.That(result.IsFailure, Is.True);
             Assert.That(result.HasValue, Is.True);
-            Assert.That(result is Failure { Error: var error } && error == Error.Unknown, Is.True);
+            Assert.That(result.Value, Is.EqualTo(Error.Unknown));
+            Assert.That(result.TryGetValue(out Error? error), Is.True);
+            Assert.That(error, Is.EqualTo(Error.Unknown));
         }
     }
 
     [Test]
-    public void Equals_SameSuccessValue_IsTrue()
+    public void Switch_OnDefault_MatchesUnknownError()
     {
-        Result<int> first = new Success<int>(42);
-        Result<int> second = new Success<int>(42);
+        Result<int> result = default;
+
+        string code = result switch
+        {
+            int value => $"success {value}",
+            Error error => error.Code,
+        };
+
+        Assert.That(code, Is.EqualTo(Error.Unknown.Code));
+    }
+
+    [Test]
+    public void Equals_SameValue_ReturnsTrue()
+    {
+        Result<int> first = 42;
+        Result<int> second = 42;
 
         Assert.That(first, Is.EqualTo(second));
     }
 
     [Test]
-    public void Create_FromValueAndPatternMatch_DoesNotAllocate()
+    public void PatternMatch_OnSuccess_DoesNotAllocate()
     {
         static long Run(int iterations)
         {
             long sum = 0;
             for (var i = 0; i < iterations; i++)
             {
-                Result<int> result = Result.FromValue(i);
-                if (result is Success<int> success && result.IsSuccess)
+                Result<int> result = i;
+                if (result is int value && result.IsSuccess)
                 {
-                    sum += success.Value;
+                    sum += value;
                 }
             }
 
@@ -110,15 +124,15 @@ public class ResultTTests
     }
 
     [Test]
-    public void Create_FromErrorAndPatternMatch_DoesNotAllocate()
+    public void PatternMatch_OnFailure_DoesNotAllocate()
     {
         static int Run(int iterations)
         {
             var count = 0;
             for (var i = 0; i < iterations; i++)
             {
-                Result<int> result = Result.FromError(Error.Unknown);
-                if (result is Failure { Error: not null } && result.IsFailure)
+                Result<int> result = Error.Unknown;
+                if (result is Error && result.IsFailure)
                 {
                     count++;
                 }

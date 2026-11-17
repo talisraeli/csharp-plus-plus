@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 namespace Cspp.Results;
@@ -5,8 +6,6 @@ namespace Cspp.Results;
 [Union]
 public readonly record struct Result : IUnion
 {
-    public static readonly Success Success = default;
-    public static readonly Failure Failure = new(Error.Unknown);
     private readonly Error? error;
     private readonly ResultType type;
 
@@ -15,27 +14,27 @@ public readonly record struct Result : IUnion
         type = ResultType.Success;
     }
 
-    public Result(Failure failure)
+    public Result(Error error)
     {
-        error = failure.Error;
+        this.error = error;
         type = ResultType.Failure;
     }
 
-    public object? Value => type == ResultType.Success ? default(Success) : new Failure(Error);
+    public object? Value => type == ResultType.Success ? Success.Instance : Error;
 
     public bool HasValue => true;
 
     private Error Error => error ?? Error.Unknown;
 
-    public bool TryGetValue(out Success success)
+    public bool TryGetValue([NotNullWhen(true)] out Success? success)
     {
-        success = default;
+        success = type == ResultType.Success ? Success.Instance : null;
         return type == ResultType.Success;
     }
 
-    public bool TryGetValue(out Failure failure)
+    public bool TryGetValue([NotNullWhen(true)] out Error? error)
     {
-        failure = type == ResultType.Failure ? new Failure(Error) : default;
+        error = type == ResultType.Failure ? Error : null;
         return type == ResultType.Failure;
     }
 }
@@ -47,34 +46,34 @@ public readonly record struct Result<T> : IUnion
     private readonly Error? error;
     private readonly ResultType type;
 
-    public Result(Success<T> success)
+    public Result(T value)
     {
-        value = success.Value;
+        this.value = value;
         type = ResultType.Success;
     }
 
-    public Result(Failure failure)
+    public Result(Error error)
     {
         value = default!;
-        error = failure.Error;
+        this.error = error;
         type = ResultType.Failure;
     }
 
-    public object? Value => type == ResultType.Success ? new Success<T>(value) : new Failure(Error);
+    public object? Value => type == ResultType.Success ? value : Error;
 
     public bool HasValue => true;
 
     private Error Error => error ?? Error.Unknown;
 
-    public bool TryGetValue(out Success<T> success)
+    public bool TryGetValue([MaybeNullWhen(false)] out T value)
     {
-        success = type == ResultType.Success ? new Success<T>(value) : default;
+        value = type == ResultType.Success ? this.value : default;
         return type == ResultType.Success;
     }
 
-    public bool TryGetValue(out Failure failure)
+    public bool TryGetValue([NotNullWhen(true)] out Error? error)
     {
-        failure = type == ResultType.Failure ? new Failure(Error) : default;
+        error = type == ResultType.Failure ? Error : null;
         return type == ResultType.Failure;
     }
 }
