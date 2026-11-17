@@ -4,7 +4,7 @@ public static class ResultExtensions
 {
     extension(Result result)
     {
-        public bool IsSuccess => result.Value is Success;
+        public bool IsSuccess => result.TryGetValue(out Success _);
         public bool IsFailure => !result.IsSuccess;
 
         public static Success<T> FromValue<T>(T value)
@@ -20,7 +20,7 @@ public static class ResultExtensions
 
     extension<T>(Result<T> result)
     {
-        public bool IsSuccess => result.Value is Success<T>;
+        public bool IsSuccess => result.TryGetValue(out Success<T> _);
         public bool IsFailure => !result.IsSuccess;
     }
 }

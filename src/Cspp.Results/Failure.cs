@@ -1,6 +1,6 @@
 namespace Cspp.Results;
 
-public readonly record struct Failure : IResult
+public readonly record struct Failure
 {
     [Obsolete("Use Error(string code, string message) constructor instead.", true)]
     public Failure()
