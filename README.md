@@ -13,7 +13,7 @@ A `Result` type for returning success or failure without throwing exceptions. It
 |-------------|------------------------------------------------------------------------------------------------------------------|
 | `Result`    | A union of `Success` or `Failure`.                                                                               |
 | `Result<T>` | A union of a `T` value or `Failure`.                                                                             |
-| `Success`   | A singleton (`Success.Instance`) marking success for the non-generic `Result`.                                   |
+| `Success`   | A singleton, obtained through `Result.Success`, marking success for the non-generic `Result`.                    |
 | `Failure`   | A `Code` and an `Error` message, neither null nor whitespace. Predefined: `Failure.Unknown`, `Failure.Uninitialized`. |
 
 ### Usage

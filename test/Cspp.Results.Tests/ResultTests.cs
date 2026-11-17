@@ -7,15 +7,12 @@ namespace Cspp.Results.Tests;
 public class ResultTests
 {
     [Test]
-    public void Success_WhenAccessed_ReturnsSuccessResult()
+    public void Success_WhenAccessedTwice_ReturnsSameInstance()
     {
-        Result result = Result.Success;
+        Success first = Result.Success;
+        Success second = Result.Success;
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.True);
-            Assert.That(result.IsFailure, Is.False);
-        }
+        Assert.That(first, Is.SameAs(second));
     }
 
     [Test]
