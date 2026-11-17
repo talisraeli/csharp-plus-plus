@@ -4,6 +4,7 @@ Small building blocks that extend C# with patterns found in other languages.
 
 ## Cspp.Results
 
+[![CI](https://github.com/talisraeli/csharp-plus-plus/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/talisraeli/csharp-plus-plus/actions/workflows/ci.yml)
 [![NuGet](https://img.shields.io/nuget/v/Cspp.Results?logo=nuget)](https://www.nuget.org/packages/Cspp.Results)
 
 A `Result` type for returning success or failure without throwing exceptions. It is built on C# union types (`[Union]` /
@@ -59,7 +60,8 @@ The check covers types written in source, including type parameters constrained 
 
 ## Requirements
 
-- .NET 11 SDK. The project targets `net11.0` and needs a C# version that supports union types.
+- .NET 11 SDK. The project targets `net11.0` and needs a C# version that supports union types. `global.json` pins the
+  SDK to the 11.0.1xx band (11.0.100 or a later patch), so local and CI builds use the same compiler.
 
 ## Building and testing
 
@@ -73,6 +75,19 @@ follow `Member_Scenario_ExpectedResult`.
 
 The build treats warnings as errors and runs StyleCop analyzers. Package versions are managed centrally in
 `Directory.Packages.props`.
+
+## Releasing
+
+GitHub Actions builds and tests every push and pull request to `main` (`.github/workflows/ci.yml`). To publish to
+NuGet, push a version tag:
+
+```sh
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+`.github/workflows/release.yml` takes the package version from the tag, builds, tests, packs and pushes the `.nupkg`
+and `.snupkg` to nuget.org using NuGet trusted publishing.
 
 ## Repository layout
 

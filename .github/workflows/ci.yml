@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore CSharpPlusPlus.slnx
+
+      - name: Build
+        run: dotnet build CSharpPlusPlus.slnx -c Release --no-restore
+
+      - name: Test
+        run: >-
+          dotnet test CSharpPlusPlus.slnx -c Release --no-build
+          --collect "XPlat Code Coverage"
+          --results-directory TestResults
+
+      - name: Pack
+        run: dotnet pack src/Cspp.Results/Cspp.Results.csproj -c Release --no-build -o artifacts
+
+      # The analyzer DLL is picked up from the analyzer's build output, so a pack that runs before
+      # that output exists silently ships a package without CSPP0001.
+      - name: Verify package contents
+        run: unzip -l artifacts/Cspp.Results.*.nupkg | grep -q 'analyzers/dotnet/cs/Cspp.Results.Analyzers.dll'
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: coverage
+          path: TestResults/**/coverage.cobertura.xml
+          if-no-files-found: ignore
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: packages
+          path: artifacts/*

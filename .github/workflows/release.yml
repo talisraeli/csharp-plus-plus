@@ -1,0 +1,64 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # NuGet trusted publishing
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Read version from tag
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Tag '$GITHUB_REF_NAME' is not a version tag such as v1.2.3 or v1.2.3-beta.1."
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Build
+        run: dotnet build CSharpPlusPlus.slnx -c Release -p:Version="$VERSION"
+
+      - name: Test
+        run: dotnet test CSharpPlusPlus.slnx -c Release --no-build
+
+      - name: Pack
+        run: dotnet pack src/Cspp.Results/Cspp.Results.csproj -c Release --no-build -p:Version="$VERSION" -o artifacts
+
+      - name: Verify package contents
+        run: unzip -l "artifacts/Cspp.Results.$VERSION.nupkg" | grep -q 'analyzers/dotnet/cs/Cspp.Results.Analyzers.dll'
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: packages
+          path: artifacts/*
+
+      - name: Log in to NuGet
+        id: nuget
+        uses: NuGet/login@v1
+        with:
+          user: talisraeli
+
+      # Pushing the .nupkg also pushes the .snupkg next to it.
+      - name: Push to NuGet
+        run: >-
+          dotnet nuget push "artifacts/Cspp.Results.$VERSION.nupkg"
+          --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}"
+          --source https://api.nuget.org/v3/index.json
