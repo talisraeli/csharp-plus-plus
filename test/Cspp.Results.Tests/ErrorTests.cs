@@ -35,4 +35,14 @@ public class ErrorTests
     {
         Assert.That(Error.Unknown, Is.Not.Null);
     }
+
+    [Test]
+    public void Uninitialized_ComparedToUnknown_HasDistinctCodeAndMessage()
+    {
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(Error.Uninitialized.Code, Is.Not.EqualTo(Error.Unknown.Code));
+            Assert.That(Error.Uninitialized.Message, Is.Not.EqualTo(Error.Unknown.Message));
+        }
+    }
 }

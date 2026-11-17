@@ -72,7 +72,7 @@ public class ResultTests
     }
 
     [Test]
-    public void Default_WhenCreated_IsFailureWithUnknownError()
+    public void Default_WhenCreated_IsFailureWithUninitializedError()
     {
         Result result = default;
 
@@ -80,14 +80,14 @@ public class ResultTests
         {
             Assert.That(result.IsFailure, Is.True);
             Assert.That(result.HasValue, Is.True);
-            Assert.That(result.Value, Is.EqualTo(Error.Unknown));
+            Assert.That(result.Value, Is.EqualTo(Error.Uninitialized));
             Assert.That(result.TryGetValue(out Error? error), Is.True);
-            Assert.That(error, Is.EqualTo(Error.Unknown));
+            Assert.That(error, Is.EqualTo(Error.Uninitialized));
         }
     }
 
     [Test]
-    public void Switch_OnDefault_MatchesUnknownError()
+    public void Switch_OnDefault_MatchesUninitializedError()
     {
         Result result = default;
 
@@ -97,7 +97,7 @@ public class ResultTests
             Error error => error.Code,
         };
 
-        Assert.That(code, Is.EqualTo(Error.Unknown.Code));
+        Assert.That(code, Is.EqualTo(Error.Uninitialized.Code));
     }
 
     [Test]

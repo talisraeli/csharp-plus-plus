@@ -8,6 +8,7 @@
     <File Path="README.md"/>
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/Cspp.Results.Analyzers/Cspp.Results.Analyzers.csproj"/>
     <Project Path="src/Cspp.Results/Cspp.Results.csproj"/>
   </Folder>
   <Folder Name="/test/">

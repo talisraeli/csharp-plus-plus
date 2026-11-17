@@ -8,6 +8,10 @@ public record Error
         Join(".", nameof(Error), nameof(Unknown)),
         "Unknown Error");
 
+    public static readonly Error Uninitialized = new(
+        Join(".", nameof(Error), nameof(Uninitialized)),
+        "The result was not initialized with a value or an error.");
+
     public Error(string code, string message)
     {
         if (!IsValidError(code, message))

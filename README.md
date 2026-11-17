@@ -14,7 +14,7 @@ A `Result` type for returning success or failure without throwing exceptions. It
 | `Result`    | A union of `Success` or `Error`.                                                                               |
 | `Result<T>` | A union of a `T` value or `Error`.                                                                             |
 | `Success`   | A singleton (`Success.Instance`) marking success for the non-generic `Result`.                                 |
-| `Error`     | A `Code` and a `Message`, neither of which can be null or whitespace. `Error.Unknown` is a predefined default. |
+| `Error`     | A `Code` and a `Message`, neither of which can be null or whitespace. Predefined: `Error.Unknown`, `Error.Uninitialized`. |
 
 ### Usage
 
@@ -40,7 +40,22 @@ arm. If you only need to check which case you have, `result.IsSuccess` and `resu
 
 For the non-generic `Result`, return `Result.Success` or an `Error`.
 
-A `default` result is a failure carrying `Error.Unknown`.
+A success value may be `null` when `T` allows it (for example `Result<string?>`).
+
+A `default` result is a failure carrying `Error.Uninitialized`, which has its own code and message so it can't be
+confused with `Error.Unknown`.
+
+### Analyzer
+
+`T` must not be `Error` or a type derived from it, because then a success value and a failure would look the same. The
+package includes an analyzer that reports this as a compile error:
+
+```csharp
+Result<Error> result = default; // error CSPP0001
+```
+
+The check covers types written in source, including type parameters constrained to `Error`. It does not see a
+`Result<Error>` that only exists through generic inference, such as a generic method called with an `Error` argument.
 
 ## Requirements
 
@@ -62,8 +77,9 @@ The build treats warnings as errors and runs StyleCop analyzers. Package version
 ## Repository layout
 
 ```
-src/Cspp.Results/         Result library
-test/Cspp.Results.Tests/  NUnit tests
+src/Cspp.Results/            Result library
+src/Cspp.Results.Analyzers/  Roslyn analyzer shipped inside the Cspp.Results package
+test/Cspp.Results.Tests/     NUnit tests
 ```
 
 ## License

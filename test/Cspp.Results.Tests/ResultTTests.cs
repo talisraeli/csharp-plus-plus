@@ -60,7 +60,7 @@ public class ResultTTests
     }
 
     [Test]
-    public void Default_WhenCreated_IsFailureWithUnknownError()
+    public void Default_WhenCreated_IsFailureWithUninitializedError()
     {
         Result<int> result = default;
 
@@ -68,14 +68,14 @@ public class ResultTTests
         {
             Assert.That(result.IsFailure, Is.True);
             Assert.That(result.HasValue, Is.True);
-            Assert.That(result.Value, Is.EqualTo(Error.Unknown));
+            Assert.That(result.Value, Is.EqualTo(Error.Uninitialized));
             Assert.That(result.TryGetValue(out Error? error), Is.True);
-            Assert.That(error, Is.EqualTo(Error.Unknown));
+            Assert.That(error, Is.EqualTo(Error.Uninitialized));
         }
     }
 
     [Test]
-    public void Switch_OnDefault_MatchesUnknownError()
+    public void Switch_OnDefault_MatchesUninitializedError()
     {
         Result<int> result = default;
 
@@ -85,7 +85,7 @@ public class ResultTTests
             Error error => error.Code,
         };
 
-        Assert.That(code, Is.EqualTo(Error.Unknown.Code));
+        Assert.That(code, Is.EqualTo(Error.Uninitialized.Code));
     }
 
     [Test]
@@ -147,5 +147,20 @@ public class ResultTTests
         var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
 
         Assert.That(allocated, Is.Zero);
+    }
+
+    [Test]
+    public void ImplicitConversion_FromNullValue_ReturnsSuccessWithNull()
+    {
+        Result<string?> result = (string?)null;
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(result.TryGetValue(out string? value), Is.True);
+            Assert.That(value, Is.Null);
+            Assert.That(result.TryGetValue(out Error? error), Is.False);
+            Assert.That(error, Is.Null);
+        }
     }
 }

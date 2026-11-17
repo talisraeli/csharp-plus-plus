@@ -20,22 +20,26 @@ public readonly record struct Result : IUnion
         type = ResultType.Failure;
     }
 
-    public object? Value => type == ResultType.Success ? Success.Instance : Error;
+    public object? Value => IsSuccess ? Success.Instance : Error;
 
     public bool HasValue => true;
 
-    private Error Error => error ?? Error.Unknown;
+    public bool IsSuccess => type == ResultType.Success;
+
+    public bool IsFailure => type == ResultType.Failure;
+
+    internal Error Error => error ?? Error.Uninitialized;
 
     public bool TryGetValue([NotNullWhen(true)] out Success? success)
     {
-        success = type == ResultType.Success ? Success.Instance : null;
-        return type == ResultType.Success;
+        success = IsSuccess ? Success.Instance : null;
+        return IsSuccess;
     }
 
     public bool TryGetValue([NotNullWhen(true)] out Error? error)
     {
-        error = type == ResultType.Failure ? Error : null;
-        return type == ResultType.Failure;
+        error = IsFailure ? Error : null;
+        return IsFailure;
     }
 }
 
@@ -43,37 +47,36 @@ public readonly record struct Result : IUnion
 public readonly record struct Result<T> : IUnion
 {
     private readonly T value;
-    private readonly Error? error;
-    private readonly ResultType type;
+    private readonly Result state;
 
     public Result(T value)
     {
         this.value = value;
-        type = ResultType.Success;
+        state = Success.Instance;
     }
 
     public Result(Error error)
     {
         value = default!;
-        this.error = error;
-        type = ResultType.Failure;
+        state = error;
     }
 
-    public object? Value => type == ResultType.Success ? value : Error;
+    public object? Value => IsSuccess ? value : state.Error;
 
     public bool HasValue => true;
 
-    private Error Error => error ?? Error.Unknown;
+    public bool IsSuccess => state.IsSuccess;
+
+    public bool IsFailure => state.IsFailure;
 
     public bool TryGetValue([MaybeNullWhen(false)] out T value)
     {
-        value = type == ResultType.Success ? this.value : default;
-        return type == ResultType.Success;
+        value = IsSuccess ? this.value : default;
+        return IsSuccess;
     }
 
     public bool TryGetValue([NotNullWhen(true)] out Error? error)
     {
-        error = type == ResultType.Failure ? Error : null;
-        return type == ResultType.Failure;
+        return state.TryGetValue(out error);
     }
 }

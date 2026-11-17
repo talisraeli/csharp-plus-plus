@@ -7,11 +7,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Cspp.Results\Cspp.Results.csproj"/>
+    <ProjectReference Include="..\..\src\Cspp.Results.Analyzers\Cspp.Results.Analyzers.csproj"/>
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector"/>
     <PackageReference Include="JetBrains.Annotations"/>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp"/>
     <PackageReference Include="Microsoft.NET.Test.Sdk"/>
     <PackageReference Include="NUnit"/>
     <PackageReference Include="NUnit.Analyzers">

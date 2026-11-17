@@ -1,6 +1,6 @@
 namespace Cspp.Results;
 
-public sealed record Success
+public sealed class Success
 {
     public static readonly Success Instance = new();
 
