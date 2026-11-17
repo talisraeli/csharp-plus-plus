@@ -4,6 +4,6 @@ public static class ResultExtensions
 {
     extension(Result)
     {
-        public static Result Success => Success.Instance;
+        public static Success Success => Success.Instance;
     }
 }

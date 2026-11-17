@@ -21,7 +21,7 @@ public class ResultTests
     [Test]
     public void ImplicitConversion_FromSuccess_ReturnsSuccessResult()
     {
-        Result result = Success.Instance;
+        Result result = Result.Success;
 
         using (Assert.EnterMultipleScope())
         {
@@ -50,7 +50,7 @@ public class ResultTests
         using (Assert.EnterMultipleScope())
         {
             Assert.That(result.TryGetValue(out Success? success), Is.True);
-            Assert.That(success, Is.SameAs(Success.Instance));
+            Assert.That(success, Is.SameAs(Result.Success));
             Assert.That(result.TryGetValue(out Failure? failure), Is.False);
             Assert.That(failure, Is.Null);
         }
