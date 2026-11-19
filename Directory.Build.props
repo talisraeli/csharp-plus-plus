@@ -17,4 +17,12 @@
     </PackageReference>
   </ItemGroup>
 
+  <!-- Points git at the repository's hooks (.githooks) on the first local restore or build after cloning. Skipped in CI
+       and outside a git checkout; a failure here never fails the build. -->
+  <Target Name="InstallGitHooks" BeforeTargets="Restore;Build"
+          Condition="'$(GITHUB_ACTIONS)' != 'true' and Exists('$(MSBuildThisFileDirectory).git')">
+    <Exec Command="git config core.hooksPath .githooks" WorkingDirectory="$(MSBuildThisFileDirectory)"
+          ContinueOnError="true" StandardOutputImportance="low" />
+  </Target>
+
 </Project>

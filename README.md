@@ -76,6 +76,11 @@ follow `Member_Scenario_ExpectedResult`.
 The build treats warnings as errors and runs StyleCop analyzers. Package versions are managed centrally in
 `Directory.Packages.props`.
 
+A pre-commit hook in `.githooks/` runs `dotnet format` on staged `.cs` files and re-stages them, then builds the
+solution and runs the tests in Release. The first local restore or build enables it by running
+`git config core.hooksPath .githooks` (see the `InstallGitHooks` target in `Directory.Build.props`). If a staged file also has unstaged changes, the hook only checks its formatting, so the unstaged changes don't end up
+in the commit. Use `git commit --no-verify` to skip the hook.
+
 ## Releasing
 
 GitHub Actions builds and tests every push and pull request to `main` (`.github/workflows/ci.yml`). To publish to
