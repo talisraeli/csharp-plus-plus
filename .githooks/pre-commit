@@ -1,0 +1,48 @@
+#!/bin/sh
+# Formats staged C# files, then builds the solution and runs the tests.
+# Enable once per clone with: git config core.hooksPath .githooks
+# Skip for a single commit with: git commit --no-verify
+set -eu
+
+solution=CSharpPlusPlus.slnx
+cd "$(git rev-parse --show-toplevel)"
+
+# Staged .cs files (added, copied, modified or renamed), one per line.
+staged=$(git diff --cached --name-only --diff-filter=ACMR -- '*.cs')
+
+if [ -n "$staged" ]; then
+    # Files that also have unstaged changes: formatting them and re-staging would sweep those changes into the commit,
+    # so they are only checked.
+    unstaged=$(git diff --name-only -- '*.cs')
+    if [ -n "$unstaged" ]; then
+        full=$(printf '%s\n' "$staged" | grep -vxF -e "$unstaged" || true)
+        partial=$(printf '%s\n' "$staged" | grep -xF -e "$unstaged" || true)
+    else
+        full=$staged
+        partial=
+    fi
+
+    if [ -n "$full" ]; then
+        echo "pre-commit: formatting staged files"
+        # shellcheck disable=SC2086 # word splitting on newlines is intended; paths contain no spaces
+        dotnet format "$solution" --include $full
+        # shellcheck disable=SC2086
+        git add -- $full
+    fi
+
+    if [ -n "$partial" ]; then
+        echo "pre-commit: checking formatting of partially staged files"
+        # shellcheck disable=SC2086
+        if ! dotnet format "$solution" --verify-no-changes --include $partial; then
+            echo "pre-commit: these files are partially staged and need formatting; run 'dotnet format' and stage them:" >&2
+            printf '  %s\n' $partial >&2
+            exit 1
+        fi
+    fi
+fi
+
+echo "pre-commit: building"
+dotnet build "$solution" -c Release --nologo
+
+echo "pre-commit: testing"
+dotnet test "$solution" -c Release --no-build --nologo
