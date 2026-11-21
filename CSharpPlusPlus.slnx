@@ -12,6 +12,7 @@
     <Project Path="src/Cspp.Results/Cspp.Results.csproj" />
   </Folder>
   <Folder Name="/test/">
+    <File Path="test/Directory.Build.props" />
     <Project Path="test/Cspp.Results.Tests/Cspp.Results.Tests.csproj" />
   </Folder>
 </Solution>
