@@ -4,12 +4,15 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Operations;
 
 namespace Cspp.Results.Analyzers;
 
 /// <summary>
 /// Reports <c>Result&lt;T&gt;</c> where <c>T</c> is or derives from <c>Failure</c>. Such a type cannot tell its success
-/// value apart from its failure, because both cases convert from a <c>Failure</c>.
+/// value apart from its failure, because both cases convert from a <c>Failure</c>. Covers types written in source and
+/// generic method calls whose type arguments make them return such a type, for example
+/// <c>result.Map(_ =&gt; Failure.Unknown)</c>.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class ResultOfFailureAnalyzer : DiagnosticAnalyzer
@@ -46,6 +49,9 @@ public sealed class ResultOfFailureAnalyzer : DiagnosticAnalyzer
             start.RegisterSyntaxNodeAction(
                 node => AnalyzeGenericName(node, result, failure),
                 SyntaxKind.GenericName);
+            start.RegisterOperationAction(
+                operation => AnalyzeInvocation(operation, result, failure),
+                OperationKind.Invocation);
         });
     }
 
@@ -75,6 +81,51 @@ public sealed class ResultOfFailureAnalyzer : DiagnosticAnalyzer
                 name.TypeArgumentList.Arguments[0].GetLocation(),
                 valueType.ToDisplayString()));
         }
+    }
+
+    private static void AnalyzeInvocation(
+        OperationAnalysisContext context,
+        INamedTypeSymbol result,
+        INamedTypeSymbol failure)
+    {
+        IMethodSymbol method = ((IInvocationOperation)context.Operation).TargetMethod;
+        if (!method.IsGenericMethod
+            || method.ReturnType is not INamedTypeSymbol returnType
+            || !SymbolEqualityComparer.Default.Equals(returnType.OriginalDefinition, result))
+        {
+            return;
+        }
+
+        // Only a return type that comes from a type argument. A Result<Failure> written in the method's declaration, or
+        // a type parameter constrained to Failure, is already reported there.
+        ITypeSymbol declared = ((INamedTypeSymbol)method.OriginalDefinition.ReturnType).TypeArguments[0];
+        if (declared is not ITypeParameterSymbol || IsOrDerivesFrom(declared, failure))
+        {
+            return;
+        }
+
+        ITypeSymbol valueType = returnType.TypeArguments[0];
+        if (IsOrDerivesFrom(valueType, failure))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(
+                Rule,
+                GetMethodNameLocation(context.Operation.Syntax),
+                valueType.ToDisplayString()));
+        }
+    }
+
+    private static Location GetMethodNameLocation(SyntaxNode syntax)
+    {
+        SyntaxNode name = syntax is InvocationExpressionSyntax invocation
+            ? invocation.Expression switch
+            {
+                MemberAccessExpressionSyntax memberAccess => memberAccess.Name,
+                MemberBindingExpressionSyntax memberBinding => memberBinding.Name,
+                _ => invocation.Expression
+            }
+            : syntax;
+
+        return name.GetLocation();
     }
 
     private static bool IsOrDerivesFrom(ITypeSymbol type, INamedTypeSymbol baseType)

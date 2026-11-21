@@ -73,6 +73,77 @@ public class ResultOfFailureAnalyzerTests
         Assert.That(diagnostics, Has.Length.EqualTo(2));
     }
 
+    [TestCase("var result = Wrap(Failure.Unknown);")]
+    [TestCase("var result = Wrap(new ValidationFailure(\"Code\", \"Error\"));")]
+    [TestCase("var result = Wrap<Failure>(Failure.Unknown);")]
+    [TestCase("var mapped = new Result<int>(1).Map(_ => Failure.Unknown);")]
+    [TestCase("var mapped = new Result<int>(1).Map<int, Failure>(_ => Failure.Unknown);")]
+    [TestCase("var mapped = new Result<int>(1).Map(_ => new ValidationFailure(\"Code\", \"Error\"));")]
+    public async Task Analyze_GenericCallInferringResultOfFailure_ReportsDiagnostic(string statement)
+    {
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeStatementAsync(statement);
+
+        Assert.That(Ids(diagnostics), Is.EqualTo(new[] { ResultOfFailureAnalyzer.DiagnosticId }));
+    }
+
+    [Test]
+    public async Task Analyze_GenericCallInferringResultOfFailure_ReportsAtMethodNameWithTypeNameInMessage()
+    {
+        ImmutableArray<Diagnostic> diagnostics =
+            await AnalyzeStatementAsync("var mapped = new Result<int>(1).Map(_ => Failure.Unknown);");
+
+        Diagnostic diagnostic = diagnostics.Single();
+        string flaggedText = diagnostic.Location.SourceTree!.GetText().ToString(diagnostic.Location.SourceSpan);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(flaggedText, Is.EqualTo("Map"));
+            Assert.That(
+                diagnostic.GetMessage(),
+                Is.EqualTo(
+                    "'Cspp.Results.Failure' cannot be the value type of Result<T> because it is or derives from Cspp.Results.Failure"));
+        }
+    }
+
+    [Test]
+    public async Task Analyze_BindToGenericCallInferringResultOfFailure_ReportsEachCall()
+    {
+        ImmutableArray<Diagnostic> diagnostics =
+            await AnalyzeStatementAsync("var bound = new Result<int>(1).Bind(_ => Wrap(Failure.Unknown));");
+
+        Assert.That(diagnostics, Has.Length.EqualTo(2));
+    }
+
+    [Test]
+    public async Task Analyze_CallToMethodDeclaringResultOfFailure_ReportsOnlyDeclaration()
+    {
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeSourceAsync("""
+            using Cspp.Results;
+
+            public static class Sample
+            {
+                public static Result<TFailure> Wrap<TFailure>(TFailure failure) where TFailure : Failure => default;
+
+                public static void Run() => Wrap(Failure.Unknown);
+            }
+            """);
+
+        Assert.That(diagnostics, Has.Length.EqualTo(1));
+    }
+
+    [TestCase("var result = Wrap(1);")]
+    [TestCase("var result = Wrap<string?>(null);")]
+    [TestCase("var mapped = new Result<int>(1).Map(value => value.ToString());")]
+    [TestCase("var bound = new Result<int>(1).Bind(value => new Result<string>(value.ToString()));")]
+    [TestCase("var code = new Result<int>(1).Match(_ => string.Empty, failure => failure.Code);")]
+    [TestCase("var failure = new Result<int>(1).Match(_ => (Failure?)null, failure => failure);")]
+    public async Task Analyze_GenericCallNotInferringResultOfFailure_ReportsNothing(string statement)
+    {
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeStatementAsync(statement);
+
+        Assert.That(diagnostics, Is.Empty);
+    }
+
     [Test]
     public async Task Analyze_TypeParameterConstrainedToFailure_ReportsDiagnostic()
     {
@@ -219,6 +290,8 @@ public class ResultOfFailureAnalyzerTests
                 }
 
                 private static T Identity<T>(T value) => value;
+
+                private static Result<T> Wrap<T>(T value) => new(value);
             }
             """);
     }

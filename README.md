@@ -39,6 +39,21 @@ wrapping or casting is needed. Because the union's cases are known, the switch i
 arm. If you only need to check which case you have, `result.IsSuccess` and `result.IsFailure` are also available, and
 `TryGetValue` gives you the case without pattern matching.
 
+To transform a result or chain steps that can fail without a `switch` at each step, use `Map`, `Bind`, `Match` and
+`GetValueOrFallback`:
+
+```csharp
+Result<Order> order = Parse(text)
+    .Bind(FindCustomer)                     // Result<Customer> FindCustomer(int id)
+    .Map(customer => new Order(customer));  // a failure from Parse or FindCustomer passes through
+
+string summary = order.Match(o => $"Order for {o.Customer.Name}", failure => failure.Error);
+int quantity = Parse(text).GetValueOrFallback(1);
+```
+
+`Map` is for steps that always succeed, and `Bind` is for steps that return a `Result<T>` of their own. On a failure,
+neither calls its delegate. `GetValueOrFallback()` without a fallback returns `default(T)` on a failure.
+
 For the non-generic `Result`, return `Result.Success` or a `Failure`.
 
 A success value may be `null` when `T` allows it (for example `Result<string?>`).
@@ -55,8 +70,10 @@ package includes an analyzer that reports this as a compile error:
 Result<Failure> result = default; // CSPP0001 compile error
 ```
 
-The check covers types written in source, including type parameters constrained to `Failure`. It does not see a
-`Result<Failure>` that only exists through generic inference, such as a generic method called with a `Failure` argument.
+The check covers types written in source, including type parameters constrained to `Failure`, and generic method calls
+that return `Result<T>` with a `Failure` as `T`, such as `result.Map(_ => Failure.Unknown)`. To fail from inside a
+step, use `Bind` instead. It does not see a `Result<Failure>` nested inside another return type, such as a generic
+method returning `Task<Result<T>>`.
 
 ## Requirements
 
