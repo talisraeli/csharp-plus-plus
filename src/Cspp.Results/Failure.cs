@@ -17,7 +17,10 @@ public record Failure
     /// </summary>
     /// <param name="code">The failure code. Cannot be null, empty, or whitespace.</param>
     /// <param name="error">The error message. Cannot be null, empty, or whitespace.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="code" /> or <paramref name="error" /> is <see langword="null" />.</exception>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="code" /> or <paramref name="error" /> is
+    /// <see langword="null" />.
+    /// </exception>
     /// <exception cref="ArgumentException"><paramref name="code" /> or <paramref name="error" /> is empty or whitespace.</exception>
     public Failure(string code, string error)
     {

@@ -26,13 +26,13 @@ public readonly record struct Result : IUnion
         type = ResultType.Failure;
     }
 
-    public object? Value => IsSuccess ? Success.Instance : Failure;
-
     public bool HasValue => true;
 
     public bool IsSuccess => type == ResultType.Success;
 
     public bool IsFailure => type == ResultType.Failure;
+
+    public object? Value => IsSuccess ? Success.Instance : Failure;
 
     internal Failure Failure => failure ?? Failure.Uninitialized;
 
@@ -52,8 +52,8 @@ public readonly record struct Result : IUnion
 [Union]
 public readonly record struct Result<T> : IUnion
 {
-    private readonly T value;
     private readonly Result state;
+    private readonly T value;
 
     public Result(T value)
     {
@@ -73,13 +73,13 @@ public readonly record struct Result<T> : IUnion
         state = failure;
     }
 
-    public object? Value => IsSuccess ? value : state.Failure;
-
     public bool HasValue => true;
 
     public bool IsSuccess => state.IsSuccess;
 
     public bool IsFailure => state.IsFailure;
+
+    public object? Value => IsSuccess ? value : state.Failure;
 
     public bool TryGetValue([MaybeNullWhen(false)] out T value)
     {

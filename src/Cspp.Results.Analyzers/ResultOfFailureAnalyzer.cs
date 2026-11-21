@@ -21,12 +21,12 @@ public sealed class ResultOfFailureAnalyzer : DiagnosticAnalyzer
 
     private static readonly DiagnosticDescriptor Rule = new(
         DiagnosticId,
-        title: "Result<T> value type must not be a Failure",
-        messageFormat: "'{0}' cannot be the value type of Result<T> because it is or derives from Cspp.Results.Failure",
-        category: "Usage",
-        defaultSeverity: DiagnosticSeverity.Error,
-        isEnabledByDefault: true,
-        description: "Result<T> uses Failure as its failure case, so a value type that is a Failure makes success and failure ambiguous.");
+        "Result<T> value type must not be a Failure",
+        "'{0}' cannot be the value type of Result<T> because it is or derives from Cspp.Results.Failure",
+        "Usage",
+        DiagnosticSeverity.Error,
+        true,
+        "Result<T> uses Failure as its failure case, so a value type that is a Failure makes success and failure ambiguous.");
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
@@ -54,7 +54,7 @@ public sealed class ResultOfFailureAnalyzer : DiagnosticAnalyzer
         INamedTypeSymbol result,
         INamedTypeSymbol failure)
     {
-        var name = (GenericNameSyntax)context.Node;
+        GenericNameSyntax name = (GenericNameSyntax)context.Node;
         if (name.TypeArgumentList.Arguments.Count != 1)
         {
             return;

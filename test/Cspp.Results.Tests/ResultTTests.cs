@@ -73,7 +73,7 @@ public class ResultTTests
         Assert.That(
             () =>
             {
-                Result<int> result = (Failure)null!;
+                Result<int> result = null!;
                 return result;
             },
             Throws.TypeOf<ArgumentNullException>().With.Property("ParamName").EqualTo("failure"));
@@ -123,7 +123,7 @@ public class ResultTTests
         static long Run(int iterations)
         {
             long sum = 0;
-            for (var i = 0; i < iterations; i++)
+            for (int i = 0; i < iterations; i++)
             {
                 Result<int> result = i;
                 if (result is int value && result.IsSuccess)
@@ -136,9 +136,9 @@ public class ResultTTests
         }
 
         Run(10);
-        var before = GC.GetAllocatedBytesForCurrentThread();
+        long before = GC.GetAllocatedBytesForCurrentThread();
         Run(10_000);
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
 
         Assert.That(allocated, Is.Zero);
     }
@@ -148,8 +148,8 @@ public class ResultTTests
     {
         static int Run(int iterations)
         {
-            var count = 0;
-            for (var i = 0; i < iterations; i++)
+            int count = 0;
+            for (int i = 0; i < iterations; i++)
             {
                 Result<int> result = Failure.Unknown;
                 if (result is Failure && result.IsFailure)
@@ -162,9 +162,9 @@ public class ResultTTests
         }
 
         Run(10);
-        var before = GC.GetAllocatedBytesForCurrentThread();
+        long before = GC.GetAllocatedBytesForCurrentThread();
         Run(10_000);
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
 
         Assert.That(allocated, Is.Zero);
     }
