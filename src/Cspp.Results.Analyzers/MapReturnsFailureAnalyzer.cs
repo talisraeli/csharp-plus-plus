@@ -71,7 +71,7 @@ public sealed class MapReturnsFailureAnalyzer : DiagnosticAnalyzer
 
         foreach (IArgumentOperation argument in invocation.Arguments)
         {
-            if (Unwrap(argument.Value) is not IDelegateCreationOperation delegateCreation)
+            if (argument.Value is not IDelegateCreationOperation delegateCreation)
             {
                 continue;
             }
@@ -150,8 +150,9 @@ public sealed class MapReturnsFailureAnalyzer : DiagnosticAnalyzer
         {
             case IConversionOperation { Conversion.IsUserDefined: false } conversion:
                 return FailureValues(conversion.Operand, failure);
-            case IConditionalOperation { WhenFalse: { } whenFalse } conditional:
-                return FailureValues(conditional.WhenTrue, failure).Concat(FailureValues(whenFalse, failure));
+            case IConditionalOperation conditional:
+                // A conditional expression, unlike an if statement, always has a false branch.
+                return FailureValues(conditional.WhenTrue, failure).Concat(FailureValues(conditional.WhenFalse!, failure));
             case ICoalesceOperation coalesce:
                 return FailureValues(coalesce.Value, failure).Concat(FailureValues(coalesce.WhenNull, failure));
             case ISwitchExpressionOperation switchExpression:
@@ -159,10 +160,5 @@ public sealed class MapReturnsFailureAnalyzer : DiagnosticAnalyzer
             default:
                 return value.Type is not null && value.Type.IsOrDerivesFrom(failure) ? [value] : [];
         }
-    }
-
-    private static IOperation Unwrap(IOperation operation)
-    {
-        return operation is IConversionOperation conversion ? Unwrap(conversion.Operand) : operation;
     }
 }
