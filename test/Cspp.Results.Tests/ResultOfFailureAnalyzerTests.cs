@@ -76,9 +76,9 @@ public class ResultOfFailureAnalyzerTests
     [TestCase("var result = Wrap(Failure.Unknown);")]
     [TestCase("var result = Wrap(new ValidationFailure(\"Code\", \"Error\"));")]
     [TestCase("var result = Wrap<Failure>(Failure.Unknown);")]
-    [TestCase("var mapped = new Result<int>(1).Map(_ => Failure.Unknown);")]
-    [TestCase("var mapped = new Result<int>(1).Map<int, Failure>(_ => Failure.Unknown);")]
-    [TestCase("var mapped = new Result<int>(1).Map(_ => new ValidationFailure(\"Code\", \"Error\"));")]
+    [TestCase("var mapped = Wrap(1).Map(_ => Failure.Unknown);")]
+    [TestCase("var mapped = Wrap(1).Map<int, Failure>(_ => Failure.Unknown);")]
+    [TestCase("var mapped = Wrap(1).Map(_ => new ValidationFailure(\"Code\", \"Error\"));")]
     public async Task Analyze_GenericCallInferringResultOfFailure_ReportsDiagnostic(string statement)
     {
         ImmutableArray<Diagnostic> diagnostics = await AnalyzeStatementAsync(statement);
@@ -90,7 +90,7 @@ public class ResultOfFailureAnalyzerTests
     public async Task Analyze_GenericCallInferringResultOfFailure_ReportsAtMethodNameWithTypeNameInMessage()
     {
         ImmutableArray<Diagnostic> diagnostics =
-            await AnalyzeStatementAsync("var mapped = new Result<int>(1).Map(_ => Failure.Unknown);");
+            await AnalyzeStatementAsync("var mapped = Wrap(1).Map(_ => Failure.Unknown);");
 
         Diagnostic diagnostic = diagnostics.Single();
         string flaggedText = diagnostic.Location.SourceTree!.GetText().ToString(diagnostic.Location.SourceSpan);
@@ -109,7 +109,7 @@ public class ResultOfFailureAnalyzerTests
     public async Task Analyze_BindToGenericCallInferringResultOfFailure_ReportsEachCall()
     {
         ImmutableArray<Diagnostic> diagnostics =
-            await AnalyzeStatementAsync("var bound = new Result<int>(1).Bind(_ => Wrap(Failure.Unknown));");
+            await AnalyzeStatementAsync("var bound = Wrap(1).Bind(_ => Wrap(Failure.Unknown));");
 
         Assert.That(diagnostics, Has.Length.EqualTo(2));
     }
@@ -133,10 +133,10 @@ public class ResultOfFailureAnalyzerTests
 
     [TestCase("var result = Wrap(1);")]
     [TestCase("var result = Wrap<string?>(null);")]
-    [TestCase("var mapped = new Result<int>(1).Map(value => value.ToString());")]
-    [TestCase("var bound = new Result<int>(1).Bind(value => new Result<string>(value.ToString()));")]
-    [TestCase("var code = new Result<int>(1).Match(_ => string.Empty, failure => failure.Code);")]
-    [TestCase("var failure = new Result<int>(1).Match(_ => (Failure?)null, failure => failure);")]
+    [TestCase("var mapped = Wrap(1).Map(value => value.ToString());")]
+    [TestCase("var bound = Wrap(1).Bind(value => Wrap(value.ToString()));")]
+    [TestCase("var code = Wrap(1).Match(_ => string.Empty, failure => failure.Code);")]
+    [TestCase("var failure = Wrap(1).Match(_ => (Failure?)null, failure => failure);")]
     public async Task Analyze_GenericCallNotInferringResultOfFailure_ReportsNothing(string statement)
     {
         ImmutableArray<Diagnostic> diagnostics = await AnalyzeStatementAsync(statement);
@@ -291,7 +291,7 @@ public class ResultOfFailureAnalyzerTests
 
                 private static T Identity<T>(T value) => value;
 
-                private static Result<T> Wrap<T>(T value) => new(value);
+                private static Result<T> Wrap<T>(T value) => value;
             }
             """);
     }
