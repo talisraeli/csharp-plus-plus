@@ -11,16 +11,13 @@ namespace Cspp.Results.Analyzers;
 /// <summary>
 /// Reports <c>Result&lt;T&gt;</c> where <c>T</c> is or derives from <c>Failure</c>. Such a type cannot tell its success
 /// value apart from its failure, because both cases convert from a <c>Failure</c>. Covers types written in source and
-/// generic method calls whose type arguments make them return such a type, for example
+/// method calls whose type arguments make them return such a type, for example
 /// <c>result.Map(_ =&gt; Failure.Unknown)</c>.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class ResultOfFailureAnalyzer : DiagnosticAnalyzer
 {
     public const string DiagnosticId = "CSPP0001";
-
-    private const string ResultMetadataName = "Cspp.Results.Result`1";
-    private const string FailureMetadataName = "Cspp.Results.Failure";
 
     private static readonly DiagnosticDescriptor Rule = new(
         DiagnosticId,
@@ -39,26 +36,17 @@ public sealed class ResultOfFailureAnalyzer : DiagnosticAnalyzer
         context.EnableConcurrentExecution();
         context.RegisterCompilationStartAction(start =>
         {
-            INamedTypeSymbol? result = start.Compilation.GetTypeByMetadataName(ResultMetadataName);
-            INamedTypeSymbol? failure = start.Compilation.GetTypeByMetadataName(FailureMetadataName);
-            if (result is null || failure is null)
+            if (ResultsTypes.From(start.Compilation) is not { } types)
             {
                 return;
             }
 
-            start.RegisterSyntaxNodeAction(
-                node => AnalyzeGenericName(node, result, failure),
-                SyntaxKind.GenericName);
-            start.RegisterOperationAction(
-                operation => AnalyzeInvocation(operation, result, failure),
-                OperationKind.Invocation);
+            start.RegisterSyntaxNodeAction(node => AnalyzeGenericName(node, types), SyntaxKind.GenericName);
+            start.RegisterOperationAction(operation => AnalyzeInvocation(operation, types), OperationKind.Invocation);
         });
     }
 
-    private static void AnalyzeGenericName(
-        SyntaxNodeAnalysisContext context,
-        INamedTypeSymbol result,
-        INamedTypeSymbol failure)
+    private static void AnalyzeGenericName(SyntaxNodeAnalysisContext context, ResultsTypes types)
     {
         GenericNameSyntax name = (GenericNameSyntax)context.Node;
         if (name.TypeArgumentList.Arguments.Count != 1)
@@ -67,77 +55,71 @@ public sealed class ResultOfFailureAnalyzer : DiagnosticAnalyzer
         }
 
         SymbolInfo symbolInfo = context.SemanticModel.GetSymbolInfo(name, context.CancellationToken);
-        if (symbolInfo.Symbol is not INamedTypeSymbol type
-            || !SymbolEqualityComparer.Default.Equals(type.OriginalDefinition, result))
-        {
-            return;
-        }
-
-        ITypeSymbol valueType = type.TypeArguments[0];
-        if (valueType.IsOrDerivesFrom(failure))
+        if (symbolInfo.Symbol is INamedTypeSymbol type && types.IsResultOfFailure(type))
         {
             context.ReportDiagnostic(Diagnostic.Create(
                 Rule,
                 name.TypeArgumentList.Arguments[0].GetLocation(),
-                valueType.ToDisplayString()));
+                type.TypeArguments[0].ToDisplayString()));
         }
     }
 
-    private static void AnalyzeInvocation(
-        OperationAnalysisContext context,
-        INamedTypeSymbol result,
-        INamedTypeSymbol failure)
+    private static void AnalyzeInvocation(OperationAnalysisContext context, ResultsTypes types)
     {
         IInvocationOperation invocation = (IInvocationOperation)context.Operation;
         IMethodSymbol method = invocation.TargetMethod;
-        if (!method.IsGenericMethod || !IsResultOfFailure(method.ReturnType, result, failure))
+        ITypeSymbol declaredReturnType = method.OriginalDefinition.ReturnType;
+
+        // Only a return type that comes from a type argument (of the method, of its containing type, or of an extension
+        // block), which is when substituting the type arguments changed it. A return type that substitution leaves alone
+        // is written in source and reported there.
+        if (!types.IsResultOfFailure(method.ReturnType)
+            || SymbolEqualityComparer.Default.Equals(method.ReturnType, declaredReturnType))
         {
             return;
         }
 
-        // A declaration in source that returns Result<Failure>, or Result<TFailure> constrained to Failure, is reported
-        // where it is written. A declaration from metadata is never analyzed, so its calls are reported instead.
-        if (IsResultOfFailure(method.OriginalDefinition.ReturnType, result, failure)
+        // A declaration in source that returns Result<TFailure> constrained to Failure is reported where it is written.
+        // A declaration from metadata is never analyzed, so its calls are reported instead.
+        if (types.IsResultOfFailure(declaredReturnType)
             && method.OriginalDefinition.Locations.Any(location => location.IsInSource))
         {
             return;
         }
 
-        // A Result<Failure> that flows in through the receiver or an argument was reported where it was created, so
-        // the calls chained on it don't report the same mistake again.
-        if ((invocation.Instance?.Type is { } instanceType && ContainsResultOfFailure(instanceType, result, failure))
-            || method.Parameters.Any(parameter => ContainsResultOfFailure(parameter.Type, result, failure)))
+        // With inferred type arguments, a Result<Failure> that flows in through the receiver or an argument was
+        // reported where it was created, so the calls chained on it don't report the same mistake again. Type
+        // arguments written out are the mistake itself, so they are always reported.
+        SyntaxNode name = GetMethodName(invocation.Syntax);
+        if (name is not GenericNameSyntax
+            && ((invocation.Instance?.Type is { } instanceType && ContainsResultOfFailure(instanceType, types))
+                || method.Parameters.Any(parameter => ContainsResultOfFailure(parameter.Type, types))))
         {
             return;
         }
 
         context.ReportDiagnostic(Diagnostic.Create(
             Rule,
-            GetMethodNameLocation(invocation.Syntax),
-            ((INamedTypeSymbol)method.ReturnType).TypeArguments[0].ToDisplayString()));
+            name is SimpleNameSyntax simpleName ? simpleName.Identifier.GetLocation() : name.GetLocation(),
+            types.GetResultValueType(method.ReturnType)!.ToDisplayString()));
     }
 
-    private static bool IsResultOfFailure(ITypeSymbol type, INamedTypeSymbol result, INamedTypeSymbol failure)
-    {
-        return type is INamedTypeSymbol named
-            && SymbolEqualityComparer.Default.Equals(named.OriginalDefinition, result)
-            && named.TypeArguments[0].IsOrDerivesFrom(failure);
-    }
-
-    private static bool ContainsResultOfFailure(ITypeSymbol type, INamedTypeSymbol result, INamedTypeSymbol failure)
+    private static bool ContainsResultOfFailure(ITypeSymbol type, ResultsTypes types)
     {
         return type switch
         {
-            INamedTypeSymbol named => IsResultOfFailure(named, result, failure)
-                || named.TypeArguments.Any(argument => ContainsResultOfFailure(argument, result, failure)),
-            IArrayTypeSymbol array => ContainsResultOfFailure(array.ElementType, result, failure),
+            INamedTypeSymbol named => types.IsResultOfFailure(named)
+                || named.TypeArguments.Any(argument => ContainsResultOfFailure(argument, types)),
+            IArrayTypeSymbol array => ContainsResultOfFailure(array.ElementType, types),
             _ => false
         };
     }
 
-    private static Location GetMethodNameLocation(SyntaxNode syntax)
+    // The node naming the called method, where the diagnostic goes. Calls without invocation syntax, such as LINQ query
+    // clauses, use their whole syntax.
+    private static SyntaxNode GetMethodName(SyntaxNode syntax)
     {
-        SyntaxNode name = syntax is InvocationExpressionSyntax invocation
+        return syntax is InvocationExpressionSyntax invocation
             ? invocation.Expression switch
             {
                 MemberAccessExpressionSyntax memberAccess => memberAccess.Name,
@@ -145,7 +127,5 @@ public sealed class ResultOfFailureAnalyzer : DiagnosticAnalyzer
                 _ => invocation.Expression
             }
             : syntax;
-
-        return name.GetLocation();
     }
 }

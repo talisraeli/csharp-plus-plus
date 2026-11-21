@@ -17,9 +17,6 @@ public sealed class MapReturnsFailureAnalyzer : DiagnosticAnalyzer
     public const string DiagnosticId = "CSPP0002";
 
     private const string MapMethodName = "Map";
-    private const string ResultMetadataName = "Cspp.Results.Result`1";
-    private const string ResultExtensionsMetadataName = "Cspp.Results.ResultExtensions";
-    private const string FailureMetadataName = "Cspp.Results.Failure";
 
     private static readonly DiagnosticDescriptor Rule = new(
         DiagnosticId,
@@ -38,33 +35,30 @@ public sealed class MapReturnsFailureAnalyzer : DiagnosticAnalyzer
         context.EnableConcurrentExecution();
         context.RegisterCompilationStartAction(start =>
         {
-            INamedTypeSymbol? result = start.Compilation.GetTypeByMetadataName(ResultMetadataName);
-            INamedTypeSymbol? extensions = start.Compilation.GetTypeByMetadataName(ResultExtensionsMetadataName);
-            INamedTypeSymbol? failure = start.Compilation.GetTypeByMetadataName(FailureMetadataName);
-            if (result is null || extensions is null || failure is null)
+            if (ResultsTypes.From(start.Compilation) is not { ResultExtensions: { } extensions } types)
             {
                 return;
             }
 
             start.RegisterOperationAction(
-                operation => AnalyzeInvocation(operation, result, extensions, failure),
+                operation => AnalyzeInvocation(operation, types, extensions),
                 OperationKind.Invocation);
         });
     }
 
     private static void AnalyzeInvocation(
         OperationAnalysisContext context,
-        INamedTypeSymbol result,
-        INamedTypeSymbol extensions,
-        INamedTypeSymbol failure)
+        ResultsTypes types,
+        INamedTypeSymbol extensions)
     {
         IInvocationOperation invocation = (IInvocationOperation)context.Operation;
         IMethodSymbol method = invocation.TargetMethod;
+
+        // A mapped value type that is itself a Failure is reported by CSPP0001.
         if (method.Name != MapMethodName
             || !IsDeclaredIn(method, extensions)
-            || method.ReturnType is not INamedTypeSymbol returnType
-            || !SymbolEqualityComparer.Default.Equals(returnType.OriginalDefinition, result)
-            || returnType.TypeArguments[0].IsOrDerivesFrom(failure))
+            || types.GetResultValueType(method.ReturnType) is not { } valueType
+            || types.IsFailure(valueType))
         {
             return;
         }
@@ -76,7 +70,7 @@ public sealed class MapReturnsFailureAnalyzer : DiagnosticAnalyzer
                 continue;
             }
 
-            foreach ((IOperation returned, ITypeSymbol type) in ReturnedFailures(delegateCreation.Target, failure))
+            foreach ((IOperation returned, ITypeSymbol type) in ReturnedFailures(delegateCreation.Target, types))
             {
                 context.ReportDiagnostic(Diagnostic.Create(
                     Rule,
@@ -103,15 +97,15 @@ public sealed class MapReturnsFailureAnalyzer : DiagnosticAnalyzer
     // Each returned Failure with its type. A method group has no type of its own, so it takes its method's return type.
     private static IEnumerable<(IOperation Returned, ITypeSymbol Type)> ReturnedFailures(
         IOperation target,
-        INamedTypeSymbol failure)
+        ResultsTypes types)
     {
         switch (target)
         {
             case IAnonymousFunctionOperation lambda:
                 return ReturnedValues(lambda.Body)
-                    .SelectMany(value => FailureValues(value, failure))
+                    .SelectMany(value => FailureValues(value, types))
                     .Select(value => (value, value.Type!));
-            case IMethodReferenceOperation methodReference when methodReference.Method.ReturnType.IsOrDerivesFrom(failure):
+            case IMethodReferenceOperation methodReference when types.IsFailure(methodReference.Method.ReturnType):
                 return [(methodReference, methodReference.Method.ReturnType)];
             default:
                 return [];
@@ -144,21 +138,21 @@ public sealed class MapReturnsFailureAnalyzer : DiagnosticAnalyzer
 
     // The parts of a returned value that can each become the returned object: the value itself, or the branches of a
     // conditional, null-coalescing or switch expression, seen through casts that keep the same object.
-    private static IEnumerable<IOperation> FailureValues(IOperation value, INamedTypeSymbol failure)
+    private static IEnumerable<IOperation> FailureValues(IOperation value, ResultsTypes types)
     {
         switch (value)
         {
             case IConversionOperation { Conversion.IsUserDefined: false } conversion:
-                return FailureValues(conversion.Operand, failure);
+                return FailureValues(conversion.Operand, types);
             case IConditionalOperation conditional:
                 // A conditional expression, unlike an if statement, always has a false branch.
-                return FailureValues(conditional.WhenTrue, failure).Concat(FailureValues(conditional.WhenFalse!, failure));
+                return FailureValues(conditional.WhenTrue, types).Concat(FailureValues(conditional.WhenFalse!, types));
             case ICoalesceOperation coalesce:
-                return FailureValues(coalesce.Value, failure).Concat(FailureValues(coalesce.WhenNull, failure));
+                return FailureValues(coalesce.Value, types).Concat(FailureValues(coalesce.WhenNull, types));
             case ISwitchExpressionOperation switchExpression:
-                return switchExpression.Arms.SelectMany(arm => FailureValues(arm.Value, failure));
+                return switchExpression.Arms.SelectMany(arm => FailureValues(arm.Value, types));
             default:
-                return value.Type is not null && value.Type.IsOrDerivesFrom(failure) ? [value] : [];
+                return value.Type is not null && types.IsFailure(value.Type) ? [value] : [];
         }
     }
 }

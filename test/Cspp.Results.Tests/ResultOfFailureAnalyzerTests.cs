@@ -76,6 +76,8 @@ public class ResultOfFailureAnalyzerTests
     [TestCase("var mapped = Wrap(1).Map<int, Failure>(_ => Failure.Unknown);")]
     [TestCase("var mapped = Wrap(1).Map(_ => new ValidationFailure(\"Code\", \"Error\"));")]
     [TestCase("Result<int>? source = Wrap(1); var mapped = source?.Map(_ => Failure.Unknown);")]
+    [TestCase("var bound = Wrap(1).Bind<int, ValidationFailure>(_ => default);")]
+    [TestCase("var bound = Wrap(1).Bind<int, Failure>(_ => default);")]
     public async Task Analyze_GenericCallInferringResultOfFailure_ReportsDiagnostic(string statement)
     {
         ImmutableArray<Diagnostic> diagnostics = await AnalyzeStatementAsync(statement);
@@ -114,6 +116,75 @@ public class ResultOfFailureAnalyzerTests
         string flaggedText = diagnostic.Location.SourceTree!.GetText().ToString(diagnostic.Location.SourceSpan);
 
         Assert.That(flaggedText, Is.EqualTo("Wrap"));
+    }
+
+    [TestCase("var bound = Wrap(1).Bind<int, Failure>(_ => default);", "Bind")]
+    [TestCase("var mapped = Wrap(1).Map<int, Failure>(_ => Failure.Unknown);", "Map")]
+    public async Task Analyze_ExplicitTypeArgumentsOfResultOfFailure_ReportsAtMethodName(string statement, string expected)
+    {
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeStatementAsync(statement);
+
+        Assert.That(diagnostics.Select(AnalyzerHarness.FlaggedText), Is.EqualTo(new[] { expected }));
+    }
+
+    [Test]
+    public async Task Analyze_ExtensionBlockMemberInferringResultOfFailure_ReportsDiagnostic()
+    {
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeSourceAsync("""
+            using Cspp.Results;
+
+            public static class ToResultExtensions
+            {
+                extension<T>(T value)
+                {
+                    public Result<T> ToResult() => value;
+                }
+            }
+
+            public static class Sample
+            {
+                public static void Run() => Failure.Unknown.ToResult();
+            }
+            """);
+
+        Assert.That(diagnostics.Select(AnalyzerHarness.FlaggedText), Is.EqualTo(new[] { "ToResult" }));
+    }
+
+    [Test]
+    public async Task Analyze_MethodOfGenericTypeReturningResultOfFailure_ReportsDiagnostic()
+    {
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeSourceAsync("""
+            using Cspp.Results;
+
+            public sealed class Box<T>(T value)
+            {
+                public Result<T> Get() => value;
+            }
+
+            public static class Sample
+            {
+                public static void Run() => new Box<Failure>(Failure.Unknown).Get();
+            }
+            """);
+
+        Assert.That(diagnostics.Select(AnalyzerHarness.FlaggedText), Is.EqualTo(new[] { "Get" }));
+    }
+
+    [Test]
+    public async Task Analyze_CallToNonGenericMethodDeclaringResultOfFailure_ReportsOnlyDeclaration()
+    {
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeSourceAsync("""
+            using Cspp.Results;
+
+            public static class Sample
+            {
+                public static Result<Failure> Make() => default;
+
+                public static void Run() => Make();
+            }
+            """);
+
+        Assert.That(diagnostics.Select(AnalyzerHarness.FlaggedText), Is.EqualTo(new[] { "Failure" }));
     }
 
     [Test]
