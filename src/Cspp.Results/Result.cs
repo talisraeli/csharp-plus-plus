@@ -14,8 +14,14 @@ public readonly record struct Result : IUnion
         type = ResultType.Success;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Result"/> struct from a failure.
+    /// </summary>
+    /// <param name="failure">The failure. Cannot be <see langword="null"/>.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="failure"/> is <see langword="null"/>.</exception>
     public Result(Failure failure)
     {
+        ArgumentNullException.ThrowIfNull(failure);
         this.failure = failure;
         type = ResultType.Failure;
     }
@@ -55,8 +61,14 @@ public readonly record struct Result<T> : IUnion
         state = Success.Instance;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Result{T}"/> struct from a failure.
+    /// </summary>
+    /// <param name="failure">The failure. Cannot be <see langword="null"/>.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="failure"/> is <see langword="null"/>.</exception>
     public Result(Failure failure)
     {
+        ArgumentNullException.ThrowIfNull(failure);
         value = default!;
         state = failure;
     }

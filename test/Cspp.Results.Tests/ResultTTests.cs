@@ -60,6 +60,26 @@ public class ResultTTests
     }
 
     [Test]
+    public void Constructor_WithNullFailure_ThrowsArgumentNullException()
+    {
+        Assert.That(
+            () => new Result<int>(null!),
+            Throws.TypeOf<ArgumentNullException>().With.Property("ParamName").EqualTo("failure"));
+    }
+
+    [Test]
+    public void ImplicitConversion_FromNullFailure_ThrowsArgumentNullException()
+    {
+        Assert.That(
+            () =>
+            {
+                Result<int> result = (Failure)null!;
+                return result;
+            },
+            Throws.TypeOf<ArgumentNullException>().With.Property("ParamName").EqualTo("failure"));
+    }
+
+    [Test]
     public void Default_WhenCreated_IsUninitializedFailure()
     {
         Result<int> result = default;
