@@ -113,7 +113,7 @@ in the commit. Use `git commit --no-verify` to skip the hook.
 
 ## Benchmarks
 
-`benchmarks/Cspp.Results.Benchmarks` uses [BenchmarkDotNet](https://benchmarkdotnet.org) to compare `Cspp.Results`
+`benchmarks/Cspp.Benchmarks` uses [BenchmarkDotNet](https://benchmarkdotnet.org) to compare `Cspp.Results`
 with other result libraries: FluentResults, ErrorOr, CSharpFunctionalExtensions, OneOf and Ardalis.Result. Each library
 writes the same scenarios in its own idiomatic style, in `Libraries/`, and every failure carries a code and a message:
 
@@ -127,9 +127,9 @@ writes the same scenarios in its own idiomatic style, in `Libraries/`, and every
 `PipelineBenchmarks` fail the run if the libraries don't all return the same value.
 
 ```sh
-dotnet run -c Release --project benchmarks/Cspp.Results.Benchmarks                         # pick interactively
-dotnet run -c Release --project benchmarks/Cspp.Results.Benchmarks -- --filter '*'         # run everything
-dotnet run -c Release --project benchmarks/Cspp.Results.Benchmarks -- --filter '*Pipeline*'
+dotnet run -c Release --project benchmarks/Cspp.Benchmarks                         # pick interactively
+dotnet run -c Release --project benchmarks/Cspp.Benchmarks -- --filter '*'         # run everything
+dotnet run -c Release --project benchmarks/Cspp.Benchmarks -- --filter '*Pipeline*'
 ```
 
 Results are written to `BenchmarkDotNet.Artifacts/`. BenchmarkDotNet 0.15 doesn't recognize the `net11.0` runtime, so
@@ -202,10 +202,10 @@ and `.snupkg` to nuget.org using NuGet trusted publishing.
 ## Repository layout
 
 ```
-src/Cspp.Results/                    Result library
-src/Cspp.Results.Analyzers/          Roslyn analyzer shipped inside the Cspp.Results package
-test/Cspp.Results.Tests/             NUnit tests
-benchmarks/Cspp.Results.Benchmarks/  BenchmarkDotNet comparison with other result libraries
+src/Cspp.Results/            Result library
+src/Cspp.Results.Analyzers/  Roslyn analyzer shipped inside the Cspp.Results package
+test/Cspp.Results.Tests/     NUnit tests
+benchmarks/Cspp.Benchmarks/  BenchmarkDotNet comparison with other result libraries
 ```
 
 ## License

@@ -3,9 +3,6 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
-    <!-- Not Cspp.Results.Benchmarks: inside that namespace, Result would bind to Cspp.Results.Result before any other
-         library's Result. -->
-    <RootNamespace>Cspp.Benchmarks</RootNamespace>
     <!-- BenchmarkDotNet refuses to measure unoptimized code, so default to Release. -->
     <Configuration Condition="'$(Configuration)' == ''">Release</Configuration>
   </PropertyGroup>
