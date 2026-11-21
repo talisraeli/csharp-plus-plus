@@ -65,9 +65,7 @@ public static class ResultExtensions
         {
             ArgumentNullException.ThrowIfNull(map);
 
-            return result.TryGetValue(out T? value)
-                ? new Result<TOut>(map(value))
-                : new Result<TOut>(result.Failure);
+            return result.TryGetValue(out T? value) ? map(value) : result.Failure;
         }
 
         /// <summary>
@@ -81,9 +79,7 @@ public static class ResultExtensions
         {
             ArgumentNullException.ThrowIfNull(bind);
 
-            return result.TryGetValue(out T? value)
-                ? bind(value)
-                : new Result<TOut>(result.Failure);
+            return result.TryGetValue(out T? value) ? bind(value) : result.Failure;
         }
     }
 }
