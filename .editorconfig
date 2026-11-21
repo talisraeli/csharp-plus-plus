@@ -4,20 +4,10 @@ root = true
 [*]
 indent_style = space
 
-# Xml files
-[*.xml]
-indent_size = 2
-
-# Xml project files
-[*.{csproj,fsproj,vbproj,proj,slnx}]
-indent_size = 2
-
-# Xml config files
-[*.{props,targets,config,nuspec}]
-indent_size = 2
-
-# Xml formatting for Rider / ReSharper (dotnet format ignores these keys)
+# Xml files: plain xml, project and solution files, MSBuild and config files
 [*.{xml,csproj,fsproj,vbproj,proj,slnx,props,targets,config,nuspec}]
+indent_size = 2
+# Rider / ReSharper only (dotnet format ignores it)
 xml_space_before_self_closing = true
 
 [*.json]
