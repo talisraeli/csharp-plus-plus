@@ -75,6 +75,15 @@ that return `Result<T>` with a `Failure` as `T`, such as `result.Map(_ => Failur
 step, use `Bind` instead. It does not see a `Result<Failure>` nested inside another return type, such as a generic
 method returning `Task<Result<T>>`.
 
+`Map` stores whatever its delegate returns as the success value, so a `Failure` returned under a broader type such as
+`object` would become a success holding a failure. The analyzer reports that as a compile error too:
+
+```csharp
+Result<object> mapped = result.Map<int, object>(_ => Failure.Unknown); // CSPP0002 compile error
+```
+
+To fail from inside a step, use `Bind` and return the failure as a `Result`.
+
 ## Requirements
 
 - .NET 11 SDK. The project targets `net11.0` and needs a C# version that supports union types. `global.json` pins the

@@ -74,7 +74,7 @@ public sealed class ResultOfFailureAnalyzer : DiagnosticAnalyzer
         }
 
         ITypeSymbol valueType = type.TypeArguments[0];
-        if (IsOrDerivesFrom(valueType, failure))
+        if (valueType.IsOrDerivesFrom(failure))
         {
             context.ReportDiagnostic(Diagnostic.Create(
                 Rule,
@@ -121,7 +121,7 @@ public sealed class ResultOfFailureAnalyzer : DiagnosticAnalyzer
     {
         return type is INamedTypeSymbol named
             && SymbolEqualityComparer.Default.Equals(named.OriginalDefinition, result)
-            && IsOrDerivesFrom(named.TypeArguments[0], failure);
+            && named.TypeArguments[0].IsOrDerivesFrom(failure);
     }
 
     private static bool ContainsResultOfFailure(ITypeSymbol type, INamedTypeSymbol result, INamedTypeSymbol failure)
@@ -147,23 +147,5 @@ public sealed class ResultOfFailureAnalyzer : DiagnosticAnalyzer
             : syntax;
 
         return name.GetLocation();
-    }
-
-    private static bool IsOrDerivesFrom(ITypeSymbol type, INamedTypeSymbol baseType)
-    {
-        if (type is ITypeParameterSymbol typeParameter)
-        {
-            return typeParameter.ConstraintTypes.Any(constraint => IsOrDerivesFrom(constraint, baseType));
-        }
-
-        for (ITypeSymbol? current = type; current is not null; current = current.BaseType)
-        {
-            if (SymbolEqualityComparer.Default.Equals(current.OriginalDefinition, baseType))
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

@@ -54,7 +54,10 @@ public static class ResultExtensions
         /// <summary>
         /// Transforms the success value and passes a failure through unchanged.
         /// </summary>
-        /// <param name="map">Called with the success value if the result is a success.</param>
+        /// <param name="map">
+        /// Called with the success value if the result is a success. It must not return a <see cref="Failure" />
+        /// (<c>CSPP0002</c>), because <c>Map</c> would store it as a success value.
+        /// </param>
         /// <typeparam name="TOut">
         /// The type of the new success value. It must not be <see cref="Failure" /> or derive from it (<c>CSPP0001</c>);
         /// to fail from inside the step, use <c>Bind</c> instead.
