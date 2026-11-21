@@ -13,12 +13,15 @@ public record Failure
         "The result was not initialized with a value or a failure.");
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Failure"/> class.
+    /// Initializes a new instance of the <see cref="Failure" /> class.
     /// </summary>
     /// <param name="code">The failure code. Cannot be null, empty, or whitespace.</param>
     /// <param name="error">The error message. Cannot be null, empty, or whitespace.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="code"/> or <paramref name="error"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="code"/> or <paramref name="error"/> is empty or whitespace.</exception>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="code" /> or <paramref name="error" /> is
+    /// <see langword="null" />.
+    /// </exception>
+    /// <exception cref="ArgumentException"><paramref name="code" /> or <paramref name="error" /> is empty or whitespace.</exception>
     public Failure(string code, string error)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(code);

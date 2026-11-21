@@ -6,5 +6,5 @@ internal enum ResultType : byte
     Failure = 0,
 
     /// <summary>The result holds a success case.</summary>
-    Success = 1,
+    Success = 1
 }

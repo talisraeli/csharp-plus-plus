@@ -48,7 +48,8 @@ public class ResultOfFailureAnalyzerTests
     [Test]
     public async Task Analyze_ResultOfFailure_ReportsAtTypeArgumentWithTypeNameInMessage()
     {
-        ImmutableArray<Diagnostic> diagnostics = await AnalyzeStatementAsync("Result<ValidationFailure> result = default;");
+        ImmutableArray<Diagnostic> diagnostics =
+            await AnalyzeStatementAsync("Result<ValidationFailure> result = default;");
 
         Diagnostic diagnostic = diagnostics.Single();
         string flaggedText = diagnostic.Location.SourceTree!.GetText().ToString(diagnostic.Location.SourceSpan);
@@ -58,7 +59,8 @@ public class ResultOfFailureAnalyzerTests
             Assert.That(flaggedText, Is.EqualTo("ValidationFailure"));
             Assert.That(
                 diagnostic.GetMessage(),
-                Is.EqualTo("'ValidationFailure' cannot be the value type of Result<T> because it is or derives from Cspp.Results.Failure"));
+                Is.EqualTo(
+                    "'ValidationFailure' cannot be the value type of Result<T> because it is or derives from Cspp.Results.Failure"));
         }
     }
 

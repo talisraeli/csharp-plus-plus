@@ -4,17 +4,11 @@ root = true
 [*]
 indent_style = space
 
-# Xml files
-[*.xml]
+# Xml files: plain xml, project and solution files, MSBuild and config files
+[*.{xml,csproj,fsproj,vbproj,proj,slnx,props,targets,config,nuspec}]
 indent_size = 2
-
-# Xml project files
-[*.{csproj,fsproj,vbproj,proj,slnx}]
-indent_size = 2
-
-# Xml config files
-[*.{props,targets,config,nuspec}]
-indent_size = 2
+# Rider / ReSharper only (dotnet format ignores it)
+xml_space_before_self_closing = true
 
 [*.json]
 indent_size = 2
@@ -27,6 +21,15 @@ indent_size = 2
 # Indentation and spacing
 indent_size = 4
 tab_width = 4
+
+#### Rider / ReSharper formatting (dotnet format ignores these keys) ####
+
+# XML documentation comments: <see cref="X" />, and text not indented inside tags
+xmldoc_space_before_self_closing = true
+xmldoc_indent_text = zero_indent
+
+# No trailing comma after the last item of multiline lists (enums, initializers, switch expressions)
+csharp_trailing_comma_in_multiline_lists = false
 
 # New line preferences
 insert_final_newline = false
@@ -210,6 +213,9 @@ dotnet_diagnostic.SA1633.severity = none
 
 
 dotnet_diagnostic.SA1101.severity = none
+
+# SA1413: Use trailing commas in multi-line initializers. The repo omits the comma after the last item.
+dotnet_diagnostic.SA1413.severity = none
 
 [*.{cs,vb}]
 

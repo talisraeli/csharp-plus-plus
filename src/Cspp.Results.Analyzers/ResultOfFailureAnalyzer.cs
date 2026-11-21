@@ -54,7 +54,7 @@ public sealed class ResultOfFailureAnalyzer : DiagnosticAnalyzer
         INamedTypeSymbol result,
         INamedTypeSymbol failure)
     {
-        var name = (GenericNameSyntax)context.Node;
+        GenericNameSyntax name = (GenericNameSyntax)context.Node;
         if (name.TypeArgumentList.Arguments.Count != 1)
         {
             return;

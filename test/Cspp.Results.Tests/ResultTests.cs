@@ -111,7 +111,7 @@ public class ResultTests
         string code = result switch
         {
             Success => "success",
-            Failure failure => failure.Code,
+            Failure failure => failure.Code
         };
 
         Assert.That(code, Is.EqualTo(Failure.Uninitialized.Code));
@@ -131,8 +131,8 @@ public class ResultTests
     {
         static int Run(int iterations)
         {
-            var count = 0;
-            for (var i = 0; i < iterations; i++)
+            int count = 0;
+            for (int i = 0; i < iterations; i++)
             {
                 Result result = Result.Success;
                 if (result is Success && result.IsSuccess)
@@ -145,9 +145,9 @@ public class ResultTests
         }
 
         Run(10);
-        var before = GC.GetAllocatedBytesForCurrentThread();
+        long before = GC.GetAllocatedBytesForCurrentThread();
         Run(10_000);
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
 
         Assert.That(allocated, Is.Zero);
     }
@@ -157,8 +157,8 @@ public class ResultTests
     {
         static int Run(int iterations)
         {
-            var count = 0;
-            for (var i = 0; i < iterations; i++)
+            int count = 0;
+            for (int i = 0; i < iterations; i++)
             {
                 Result result = Failure.Unknown;
                 if (result is Failure && result.IsFailure)
@@ -171,9 +171,9 @@ public class ResultTests
         }
 
         Run(10);
-        var before = GC.GetAllocatedBytesForCurrentThread();
+        long before = GC.GetAllocatedBytesForCurrentThread();
         Run(10_000);
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
 
         Assert.That(allocated, Is.Zero);
     }

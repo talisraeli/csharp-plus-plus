@@ -1,12 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Cspp.Results\Cspp.Results.csproj"/>
-    <ProjectReference Include="..\..\src\Cspp.Results.Analyzers\Cspp.Results.Analyzers.csproj"/>
+    <ProjectReference Include="..\..\src\Cspp.Results\Cspp.Results.csproj" />
+    <ProjectReference Include="..\..\src\Cspp.Results.Analyzers\Cspp.Results.Analyzers.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp"/>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
   </ItemGroup>
 
 </Project>

@@ -10,11 +10,11 @@ Small building blocks that extend C# with patterns found in other languages.
 A `Result` type for returning success or failure without throwing exceptions. It is built on C# union types (`[Union]` /
 `IUnion`).
 
-| Type        | Description                                                                                                      |
-|-------------|------------------------------------------------------------------------------------------------------------------|
-| `Result`    | A union of `Success` or `Failure`.                                                                               |
-| `Result<T>` | A union of a `T` value or `Failure`.                                                                             |
-| `Success`   | A singleton, obtained through `Result.Success`, marking success for the non-generic `Result`.                    |
+| Type        | Description                                                                                                           |
+|-------------|-----------------------------------------------------------------------------------------------------------------------|
+| `Result`    | A union of `Success` or `Failure`.                                                                                    |
+| `Result<T>` | A union of a `T` value or `Failure`.                                                                                  |
+| `Success`   | A singleton, obtained through `Result.Success`, marking success for the non-generic `Result`.                         |
 | `Failure`   | A `Code` and an `Error` message, neither null nor whitespace. Predefined: `Failure.Unknown`, `Failure.Uninitialized`. |
 
 ### Usage
@@ -78,7 +78,8 @@ The build treats warnings as errors and runs StyleCop analyzers. Package version
 
 A pre-commit hook in `.githooks/` runs `dotnet format` on staged `.cs` files and re-stages them, then builds the
 solution and runs the tests in Release. The first local restore or build enables it by running
-`git config core.hooksPath .githooks` (see the `InstallGitHooks` target in `Directory.Build.props`). If a staged file also has unstaged changes, the hook only checks its formatting, so the unstaged changes don't end up
+`git config core.hooksPath .githooks` (see the `InstallGitHooks` target in `Directory.Build.props`). If a staged file
+also has unstaged changes, the hook only checks its formatting, so the unstaged changes don't end up
 in the commit. Use `git commit --no-verify` to skip the hook.
 
 ## Releasing
