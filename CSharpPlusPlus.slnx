@@ -7,6 +7,17 @@
     <File Path="Directory.Packages.props" />
     <File Path="README.md" />
   </Folder>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/Cspp.Benchmarks/Cspp.Benchmarks.csproj" />
+  </Folder>
+  <Folder Name="/docs/">
+    <File Path="docs/README.md" />
+    <File Path="docs/analyzers.md" />
+    <File Path="docs/benchmarks.md" />
+    <File Path="docs/development.md" />
+    <File Path="docs/releasing.md" />
+    <File Path="docs/results.md" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/Cspp.Results.Analyzers/Cspp.Results.Analyzers.csproj" />
     <Project Path="src/Cspp.Results/Cspp.Results.csproj" />

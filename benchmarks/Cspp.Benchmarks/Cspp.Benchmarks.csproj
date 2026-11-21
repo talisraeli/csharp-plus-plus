@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <!-- BenchmarkDotNet refuses to measure unoptimized code, so default to Release. -->
+    <Configuration Condition="'$(Configuration)' == ''">Release</Configuration>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Cspp.Results\Cspp.Results.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Ardalis.Result" />
+    <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="CSharpFunctionalExtensions" />
+    <PackageReference Include="ErrorOr" />
+    <PackageReference Include="FluentResults" />
+    <PackageReference Include="OneOf" />
+  </ItemGroup>
+
+</Project>
