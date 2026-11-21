@@ -88,30 +88,51 @@ public sealed class ResultOfFailureAnalyzer : DiagnosticAnalyzer
         INamedTypeSymbol result,
         INamedTypeSymbol failure)
     {
-        IMethodSymbol method = ((IInvocationOperation)context.Operation).TargetMethod;
-        if (!method.IsGenericMethod
-            || method.ReturnType is not INamedTypeSymbol returnType
-            || !SymbolEqualityComparer.Default.Equals(returnType.OriginalDefinition, result))
+        IInvocationOperation invocation = (IInvocationOperation)context.Operation;
+        IMethodSymbol method = invocation.TargetMethod;
+        if (!method.IsGenericMethod || !IsResultOfFailure(method.ReturnType, result, failure))
         {
             return;
         }
 
-        // Only a return type that comes from a type argument. A Result<Failure> written in the method's declaration, or
-        // a type parameter constrained to Failure, is already reported there.
-        ITypeSymbol declared = ((INamedTypeSymbol)method.OriginalDefinition.ReturnType).TypeArguments[0];
-        if (declared is not ITypeParameterSymbol || IsOrDerivesFrom(declared, failure))
+        // A declaration in source that returns Result<Failure>, or Result<TFailure> constrained to Failure, is reported
+        // where it is written. A declaration from metadata is never analyzed, so its calls are reported instead.
+        if (IsResultOfFailure(method.OriginalDefinition.ReturnType, result, failure)
+            && method.OriginalDefinition.Locations.Any(location => location.IsInSource))
         {
             return;
         }
 
-        ITypeSymbol valueType = returnType.TypeArguments[0];
-        if (IsOrDerivesFrom(valueType, failure))
+        // A Result<Failure> that flows in through the receiver or an argument was reported where it was created, so
+        // the calls chained on it don't report the same mistake again.
+        if ((invocation.Instance?.Type is { } instanceType && ContainsResultOfFailure(instanceType, result, failure))
+            || method.Parameters.Any(parameter => ContainsResultOfFailure(parameter.Type, result, failure)))
         {
-            context.ReportDiagnostic(Diagnostic.Create(
-                Rule,
-                GetMethodNameLocation(context.Operation.Syntax),
-                valueType.ToDisplayString()));
+            return;
         }
+
+        context.ReportDiagnostic(Diagnostic.Create(
+            Rule,
+            GetMethodNameLocation(invocation.Syntax),
+            ((INamedTypeSymbol)method.ReturnType).TypeArguments[0].ToDisplayString()));
+    }
+
+    private static bool IsResultOfFailure(ITypeSymbol type, INamedTypeSymbol result, INamedTypeSymbol failure)
+    {
+        return type is INamedTypeSymbol named
+            && SymbolEqualityComparer.Default.Equals(named.OriginalDefinition, result)
+            && IsOrDerivesFrom(named.TypeArguments[0], failure);
+    }
+
+    private static bool ContainsResultOfFailure(ITypeSymbol type, INamedTypeSymbol result, INamedTypeSymbol failure)
+    {
+        return type switch
+        {
+            INamedTypeSymbol named => IsResultOfFailure(named, result, failure)
+                || named.TypeArguments.Any(argument => ContainsResultOfFailure(argument, result, failure)),
+            IArrayTypeSymbol array => ContainsResultOfFailure(array.ElementType, result, failure),
+            _ => false
+        };
     }
 
     private static Location GetMethodNameLocation(SyntaxNode syntax)

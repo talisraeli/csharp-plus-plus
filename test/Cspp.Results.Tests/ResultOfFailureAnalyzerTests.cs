@@ -7,6 +7,7 @@ using JetBrains.Annotations;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Emit;
 
 namespace Cspp.Results.Tests;
 
@@ -105,13 +106,17 @@ public class ResultOfFailureAnalyzerTests
         }
     }
 
-    [Test]
-    public async Task Analyze_BindToGenericCallInferringResultOfFailure_ReportsEachCall()
+    [TestCase("var bound = Wrap(1).Bind(_ => Wrap(Failure.Unknown));")]
+    [TestCase("var chained = Wrap(Failure.Unknown).Map(failure => failure).Bind(Wrap);")]
+    [TestCase("var same = Identity(Wrap(Failure.Unknown));")]
+    public async Task Analyze_CallsChainedOnResultOfFailure_ReportsOnlyFirstCall(string statement)
     {
-        ImmutableArray<Diagnostic> diagnostics =
-            await AnalyzeStatementAsync("var bound = Wrap(1).Bind(_ => Wrap(Failure.Unknown));");
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeStatementAsync(statement);
 
-        Assert.That(diagnostics, Has.Length.EqualTo(2));
+        Diagnostic diagnostic = diagnostics.Single();
+        string flaggedText = diagnostic.Location.SourceTree!.GetText().ToString(diagnostic.Location.SourceSpan);
+
+        Assert.That(flaggedText, Is.EqualTo("Wrap"));
     }
 
     [Test]
@@ -131,12 +136,40 @@ public class ResultOfFailureAnalyzerTests
         Assert.That(diagnostics, Has.Length.EqualTo(1));
     }
 
+    [Test]
+    public async Task Analyze_CallToMetadataMethodDeclaringResultOfFailure_ReportsCall()
+    {
+        MetadataReference library = CompileLibrary("""
+            using Cspp.Results;
+
+            public static class Library
+            {
+                public static Result<TFailure> Wrap<TFailure>(TFailure failure) where TFailure : Failure => default;
+            }
+            """);
+
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeSourceAsync(
+            """
+            using Cspp.Results;
+
+            public static class Sample
+            {
+                public static void Run() => Library.Wrap(Failure.Unknown);
+            }
+            """,
+            additionalReference: library);
+
+        Assert.That(Ids(diagnostics), Is.EqualTo(new[] { ResultOfFailureAnalyzer.DiagnosticId }));
+    }
+
     [TestCase("var result = Wrap(1);")]
     [TestCase("var result = Wrap<string?>(null);")]
     [TestCase("var mapped = Wrap(1).Map(value => value.ToString());")]
     [TestCase("var bound = Wrap(1).Bind(value => Wrap(value.ToString()));")]
     [TestCase("var code = Wrap(1).Match(_ => string.Empty, failure => failure.Code);")]
     [TestCase("var failure = Wrap(1).Match(_ => (Failure?)null, failure => failure);")]
+    [TestCase("var same = Identity(Wrap(1));")]
+    [TestCase("var first = System.Linq.Enumerable.First(new[] { Wrap(1) });")]
     public async Task Analyze_GenericCallNotInferringResultOfFailure_ReportsNothing(string statement)
     {
         ImmutableArray<Diagnostic> diagnostics = await AnalyzeStatementAsync(statement);
@@ -298,21 +331,14 @@ public class ResultOfFailureAnalyzerTests
 
     private static async Task<ImmutableArray<Diagnostic>> AnalyzeSourceAsync(
         string source,
-        bool referenceResultsLibrary = true)
+        bool referenceResultsLibrary = true,
+        MetadataReference? additionalReference = null)
     {
-        IEnumerable<string> platformAssemblies =
-            ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator);
-        IEnumerable<string> referencePaths = referenceResultsLibrary
-            ? platformAssemblies.Append(typeof(Result).Assembly.Location)
-            : platformAssemblies.Where(path => !Path.GetFileName(path).Equals(ResultsAssemblyFileName, StringComparison.OrdinalIgnoreCase));
-
-        CSharpCompilation compilation = CSharpCompilation.Create(
-            "AnalyzerTest",
-            [CSharpSyntaxTree.ParseText(source, new CSharpParseOptions(LanguageVersion.Preview))],
-            referencePaths
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .Select(path => MetadataReference.CreateFromFile(path)),
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable));
+        CSharpCompilation compilation = CreateCompilation("AnalyzerTest", source, referenceResultsLibrary);
+        if (additionalReference is not null)
+        {
+            compilation = compilation.AddReferences(additionalReference);
+        }
 
         // A sample that does not compile could hide a missed diagnostic, so require valid source first.
         Assert.That(
@@ -323,5 +349,33 @@ public class ResultOfFailureAnalyzerTests
         return await compilation
             .WithAnalyzers([new ResultOfFailureAnalyzer()])
             .GetAnalyzerDiagnosticsAsync();
+    }
+
+    // Emits the source to an in-memory assembly, so its declarations reach the analyzed compilation as metadata.
+    private static MetadataReference CompileLibrary(string source)
+    {
+        using MemoryStream image = new();
+        EmitResult emitResult = CreateCompilation("Library", source, referenceResultsLibrary: true).Emit(image);
+
+        Assert.That(emitResult.Success, Is.True, "The library source must compile.");
+
+        return MetadataReference.CreateFromImage(image.ToArray());
+    }
+
+    private static CSharpCompilation CreateCompilation(string assemblyName, string source, bool referenceResultsLibrary)
+    {
+        IEnumerable<string> platformAssemblies =
+            ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator);
+        IEnumerable<string> referencePaths = referenceResultsLibrary
+            ? platformAssemblies.Append(typeof(Result).Assembly.Location)
+            : platformAssemblies.Where(path => !Path.GetFileName(path).Equals(ResultsAssemblyFileName, StringComparison.OrdinalIgnoreCase));
+
+        return CSharpCompilation.Create(
+            assemblyName,
+            [CSharpSyntaxTree.ParseText(source, new CSharpParseOptions(LanguageVersion.Preview))],
+            referencePaths
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Select(path => MetadataReference.CreateFromFile(path)),
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable));
     }
 }
