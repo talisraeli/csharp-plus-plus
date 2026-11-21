@@ -73,7 +73,7 @@ public class ResultTTests
         Assert.That(
             () =>
             {
-                Result<int> result = null!;
+                Result<int> result = (Failure)null!;
                 return result;
             },
             Throws.TypeOf<ArgumentNullException>().With.Property("ParamName").EqualTo("failure"));
