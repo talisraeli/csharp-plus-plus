@@ -16,6 +16,10 @@ indent_size = 2
 [*.{props,targets,config,nuspec}]
 indent_size = 2
 
+# Xml formatting for Rider / ReSharper (dotnet format ignores these keys)
+[*.{xml,csproj,fsproj,vbproj,proj,slnx,props,targets,config,nuspec}]
+xml_space_before_self_closing = false
+
 [*.json]
 indent_size = 2
 
@@ -27,6 +31,15 @@ indent_size = 2
 # Indentation and spacing
 indent_size = 4
 tab_width = 4
+
+#### Rider / ReSharper formatting (dotnet format ignores these keys) ####
+
+# XML documentation comments: <see cref="X"/>, and text not indented inside tags
+xmldoc_space_before_self_closing = false
+xmldoc_indent_text = zero_indent
+
+# Keep trailing commas in multiline lists (enums, initializers, switch expressions)
+csharp_trailing_comma_in_multiline_lists = true
 
 # New line preferences
 insert_final_newline = false
