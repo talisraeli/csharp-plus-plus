@@ -40,7 +40,7 @@ arm. If you only need to check which case you have, `result.IsSuccess` and `resu
 `TryGetValue` gives you the case without pattern matching.
 
 To transform a result or chain steps that can fail without a `switch` at each step, use `Map`, `Bind`, `Match` and
-`GetValueOrFallback`:
+`GetValueOrDefault`:
 
 ```csharp
 Result<Order> order = Parse(text)
@@ -48,11 +48,11 @@ Result<Order> order = Parse(text)
     .Map(customer => new Order(customer));  // a failure from Parse or FindCustomer passes through
 
 string summary = order.Match(o => $"Order for {o.Customer.Name}", failure => failure.Error);
-int quantity = Parse(text).GetValueOrFallback(1);
+int quantity = Parse(text).GetValueOrDefault(1);
 ```
 
 `Map` is for steps that always succeed, and `Bind` is for steps that return a `Result<T>` of their own. On a failure,
-neither calls its delegate. `GetValueOrFallback()` without a fallback returns `default(T)` on a failure.
+neither calls its delegate. `GetValueOrDefault()` without a default value returns `default(T)` on a failure.
 
 For the non-generic `Result`, return `Result.Success` or a `Failure`.
 

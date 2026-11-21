@@ -15,19 +15,19 @@ public static class ResultExtensions
         /// <returns>
         /// The success value, or <see langword="default" />(<typeparamref name="T" />) if the result is a failure.
         /// </returns>
-        public T? GetValueOrFallback()
+        public T? GetValueOrDefault()
         {
-            return result.GetValueOrFallback(default!);
+            return result.GetValueOrDefault(default!);
         }
 
         /// <summary>
-        /// Gets the success value, or <paramref name="fallback" /> if the result is a failure.
+        /// Gets the success value, or <paramref name="defaultValue" /> if the result is a failure.
         /// </summary>
-        /// <param name="fallback">The value to return if the result is a failure.</param>
-        /// <returns>The success value, or <paramref name="fallback" /> if the result is a failure.</returns>
-        public T GetValueOrFallback(T fallback)
+        /// <param name="defaultValue">The value to return if the result is a failure.</param>
+        /// <returns>The success value, or <paramref name="defaultValue" /> if the result is a failure.</returns>
+        public T GetValueOrDefault(T defaultValue)
         {
-            return result.TryGetValue(out T? value) ? value : fallback;
+            return result.TryGetValue(out T? value) ? value : defaultValue;
         }
 
         /// <summary>

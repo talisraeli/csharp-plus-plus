@@ -9,59 +9,59 @@ public class ResultExtensionsTests
     private static readonly Failure ParseFailure = new("Parse.Invalid", "Not a number.");
 
     [Test]
-    public void GetValueOrFallback_OnSuccess_ReturnsValue()
+    public void GetValueOrDefault_OnSuccess_ReturnsValue()
     {
         Result<int> result = 42;
 
-        Assert.That(result.GetValueOrFallback(-1), Is.EqualTo(42));
+        Assert.That(result.GetValueOrDefault(-1), Is.EqualTo(42));
     }
 
     [Test]
-    public void GetValueOrFallback_OnFailure_ReturnsFallback()
+    public void GetValueOrDefault_OnFailure_ReturnsDefaultValue()
     {
         Result<int> result = ParseFailure;
 
-        Assert.That(result.GetValueOrFallback(-1), Is.EqualTo(-1));
+        Assert.That(result.GetValueOrDefault(-1), Is.EqualTo(-1));
     }
 
     [Test]
-    public void GetValueOrFallback_OnDefault_ReturnsFallback()
+    public void GetValueOrDefault_OnDefault_ReturnsDefaultValue()
     {
         Result<int> result = default;
 
-        Assert.That(result.GetValueOrFallback(-1), Is.EqualTo(-1));
+        Assert.That(result.GetValueOrDefault(-1), Is.EqualTo(-1));
     }
 
     [Test]
-    public void GetValueOrFallback_OnFailureWithoutFallback_ReturnsDefault()
+    public void GetValueOrDefault_OnFailureWithoutDefaultValue_ReturnsDefault()
     {
         Result<int> result = ParseFailure;
 
-        Assert.That(result.GetValueOrFallback(), Is.Zero);
+        Assert.That(result.GetValueOrDefault(), Is.Zero);
     }
 
     [Test]
-    public void GetValueOrFallback_OnReferenceTypeFailureWithoutFallback_ReturnsNull()
+    public void GetValueOrDefault_OnReferenceTypeFailureWithoutDefaultValue_ReturnsNull()
     {
         Result<string> result = ParseFailure;
 
-        Assert.That(result.GetValueOrFallback(), Is.Null);
+        Assert.That(result.GetValueOrDefault(), Is.Null);
     }
 
     [Test]
-    public void GetValueOrFallback_OnSuccessWithoutFallback_ReturnsValue()
+    public void GetValueOrDefault_OnSuccessWithoutDefaultValue_ReturnsValue()
     {
         Result<string> result = "value";
 
-        Assert.That(result.GetValueOrFallback(), Is.EqualTo("value"));
+        Assert.That(result.GetValueOrDefault(), Is.EqualTo("value"));
     }
 
     [Test]
-    public void GetValueOrFallback_OnSuccessWithNullValue_ReturnsNull()
+    public void GetValueOrDefault_OnSuccessWithNullValue_ReturnsNull()
     {
         Result<string?> result = (string?)null;
 
-        Assert.That(result.GetValueOrFallback("fallback"), Is.Null);
+        Assert.That(result.GetValueOrDefault("default"), Is.Null);
     }
 
     [Test]
@@ -251,8 +251,8 @@ public class ResultExtensionsTests
         Result<string> success = "21";
         Result<string> failure = "abc";
 
-        int doubled = success.Bind(Parse).Map(value => value * 2).GetValueOrFallback(-1);
-        int fallback = failure.Bind(Parse).Map(value => value * 2).GetValueOrFallback(-1);
+        int doubled = success.Bind(Parse).Map(value => value * 2).GetValueOrDefault(-1);
+        int fallback = failure.Bind(Parse).Map(value => value * 2).GetValueOrDefault(-1);
 
         using (Assert.EnterMultipleScope())
         {
