@@ -1,7 +1,7 @@
 <Project>
 
   <!-- MSBuild stops at the nearest Directory.Build.props, so import the repository-wide one explicitly. -->
-  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))"/>
 
   <PropertyGroup>
     <IsPackable>false</IsPackable>
