@@ -102,7 +102,7 @@ public class ResultTTests
         string code = result switch
         {
             int value => $"success {value}",
-            Failure failure => failure.Code,
+            Failure failure => failure.Code
         };
 
         Assert.That(code, Is.EqualTo(Failure.Uninitialized.Code));

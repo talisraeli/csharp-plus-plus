@@ -19,18 +19,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="$(MSBuildThisFileDirectory)..\..\README.md" Pack="true" PackagePath="\" Visible="false"/>
+    <None Include="$(MSBuildThisFileDirectory)..\..\README.md" Pack="true" PackagePath="\" Visible="false" />
   </ItemGroup>
 
   <!-- Ship the analyzer inside this package so consumers get CSPP0001 without a separate reference. -->
   <ItemGroup>
     <ProjectReference Include="..\Cspp.Results.Analyzers\Cspp.Results.Analyzers.csproj"
                       ReferenceOutputAssembly="false"
-                      PrivateAssets="all"/>
+                      PrivateAssets="all" />
     <None Include="..\Cspp.Results.Analyzers\bin\$(Configuration)\netstandard2.0\Cspp.Results.Analyzers.dll"
           Pack="true"
           PackagePath="analyzers/dotnet/cs"
-          Visible="false"/>
+          Visible="false" />
   </ItemGroup>
 
 </Project>
