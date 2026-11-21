@@ -111,6 +111,30 @@ solution and runs the tests in Release. The first local restore or build enables
 also has unstaged changes, the hook only checks its formatting, so the unstaged changes don't end up
 in the commit. Use `git commit --no-verify` to skip the hook.
 
+## Benchmarks
+
+`benchmarks/Cspp.Results.Benchmarks` uses [BenchmarkDotNet](https://benchmarkdotnet.org) to compare `Cspp.Results`
+with other result libraries: FluentResults, ErrorOr, CSharpFunctionalExtensions, OneOf and Ardalis.Result. Each library
+writes the same scenarios in its own idiomatic style, in `Libraries/`, and every failure carries a code and a message:
+
+| Benchmark            | What it measures                                                                                     |
+|----------------------|------------------------------------------------------------------------------------------------------|
+| `CreateBenchmarks`   | Creating a success or a failure, including the failure's error object.                               |
+| `MatchBenchmarks`    | Reading an existing success or failure into a value.                                                 |
+| `PipelineBenchmarks` | Parse, `Bind` a validation step, `Map` and read the outcome, ending in success, a parse failure or a validation failure. Also runs the same steps with exceptions as a reference point. |
+
+`Cspp` is the baseline, so the `Ratio` column shows each library relative to it. `MatchBenchmarks` and
+`PipelineBenchmarks` fail the run if the libraries don't all return the same value.
+
+```sh
+dotnet run -c Release --project benchmarks/Cspp.Results.Benchmarks                         # pick interactively
+dotnet run -c Release --project benchmarks/Cspp.Results.Benchmarks -- --filter '*'         # run everything
+dotnet run -c Release --project benchmarks/Cspp.Results.Benchmarks -- --filter '*Pipeline*'
+```
+
+Results are written to `BenchmarkDotNet.Artifacts/`. BenchmarkDotNet 0.15 doesn't recognize the `net11.0` runtime, so
+the project uses the 0.16 preview until a stable release supports it.
+
 ## Releasing
 
 GitHub Actions builds and tests every push and pull request to `main` (`.github/workflows/ci.yml`). To publish to
@@ -127,9 +151,10 @@ and `.snupkg` to nuget.org using NuGet trusted publishing.
 ## Repository layout
 
 ```
-src/Cspp.Results/            Result library
-src/Cspp.Results.Analyzers/  Roslyn analyzer shipped inside the Cspp.Results package
-test/Cspp.Results.Tests/     NUnit tests
+src/Cspp.Results/                    Result library
+src/Cspp.Results.Analyzers/          Roslyn analyzer shipped inside the Cspp.Results package
+test/Cspp.Results.Tests/             NUnit tests
+benchmarks/Cspp.Results.Benchmarks/  BenchmarkDotNet comparison with other result libraries
 ```
 
 ## License
