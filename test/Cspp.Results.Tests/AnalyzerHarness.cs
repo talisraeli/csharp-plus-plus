@@ -45,6 +45,8 @@ internal static class AnalyzerHarness
 
                 private static Result<T> Wrap<T>(T value) => value;
 
+                private static Result<T> First<T>(Result<T>[] results) => results[0];
+
                 private static Failure GetFailure() => Failure.Unknown;
             }
             """);

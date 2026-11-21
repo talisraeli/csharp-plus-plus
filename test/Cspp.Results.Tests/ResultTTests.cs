@@ -70,12 +70,10 @@ public class ResultTTests
     [Test]
     public void ImplicitConversion_FromNullFailure_ThrowsArgumentNullException()
     {
+        static Result<int> Convert(Failure failure) => failure;
+
         Assert.That(
-            () =>
-            {
-                Result<int> result = (Failure)null!;
-                return result;
-            },
+            () => Convert(null!),
             Throws.TypeOf<ArgumentNullException>().With.Property("ParamName").EqualTo("failure"));
     }
 
@@ -95,17 +93,15 @@ public class ResultTTests
     }
 
     [Test]
+    public void Switch_OnSuccess_MatchesValue()
+    {
+        Assert.That(Describe(42), Is.EqualTo("success 42"));
+    }
+
+    [Test]
     public void Switch_OnDefault_MatchesUninitializedFailure()
     {
-        Result<int> result = default;
-
-        string code = result switch
-        {
-            int value => $"success {value}",
-            Failure failure => failure.Code
-        };
-
-        Assert.That(code, Is.EqualTo(Failure.Uninitialized.Code));
+        Assert.That(Describe(default), Is.EqualTo(Failure.Uninitialized.Code));
     }
 
     [Test]
@@ -182,5 +178,31 @@ public class ResultTTests
             Assert.That(result.TryGetValue(out Failure? failure), Is.False);
             Assert.That(failure, Is.Null);
         }
+    }
+
+    [Test]
+    public void Value_OnSuccess_ReturnsValue()
+    {
+        Result<string> result = "value";
+
+        Assert.That(result.Value, Is.EqualTo("value"));
+    }
+
+    [Test]
+    public void Value_OnFailure_ReturnsFailure()
+    {
+        Result<string> result = Failure.Unknown;
+
+        Assert.That(result.Value, Is.SameAs(Failure.Unknown));
+    }
+
+    // One exhaustive switch shared by the switch tests, so each of its arms is reached by one of them.
+    private static string Describe(Result<int> result)
+    {
+        return result switch
+        {
+            int value => $"success {value}",
+            Failure failure => failure.Code
+        };
     }
 }

@@ -36,6 +36,7 @@ public class MapReturnsFailureAnalyzerTests
     [TestCase("var mapped = Wrap(1).Map<int, object?>(_ => (Failure?)null ?? Failure.Unknown);", "Failure.Unknown")]
     [TestCase("var mapped = Wrap(1).Map<int, object>(_ => GetFailure());", "GetFailure()")]
     [TestCase("var mapped = ResultExtensions.Map<int, object>(Wrap(1), _ => Failure.Unknown);", "Failure.Unknown")]
+    [TestCase("var mapped = Wrap(1).Map((System.Func<int, object>)(_ => Failure.Unknown));", "Failure.Unknown")]
     public async Task Analyze_MapDelegateReturningFailure_ReportsAtReturnedExpression(string statement, string expected)
     {
         ImmutableArray<Diagnostic> diagnostics = await AnalyzeStatementAsync(statement);
@@ -78,11 +79,34 @@ public class MapReturnsFailureAnalyzerTests
     [TestCase("var mapped = Wrap(1).Map<int, object>(_ => (object)Failure.Unknown.Error);")]
     [TestCase("var mapped = Wrap(1).Map<int, System.Func<Failure>>(_ => () => Failure.Unknown);")]
     [TestCase("var mapped = Wrap(1).Map<int, object>(_ => { Failure Local() => Failure.Unknown; return Local().Code; });")]
+    [TestCase("var mapped = Wrap(1).Map<int, object>(_ => { System.Func<Failure> make = () => Failure.Unknown; return make().Code; });")]
+    [TestCase("var mapped = Wrap(1).Map<int, object>(ToText); static object ToText(int value) => value.ToString();")]
+    [TestCase("System.Func<int, object> toFailure = _ => Failure.Unknown; var mapped = Wrap(1).Map(toFailure);")]
     [TestCase("var bound = Wrap(1).Bind<int, object>(_ => Failure.Unknown);")]
     [TestCase("var matched = Wrap(1).Match<int, object>(value => value, failure => failure);")]
     public async Task Analyze_MapNotReturningFailureAsValue_ReportsNothing(string statement)
     {
         ImmutableArray<Diagnostic> diagnostics = await AnalyzeStatementAsync(statement);
+
+        Assert.That(diagnostics, Is.Empty);
+    }
+
+    [Test]
+    public async Task Analyze_MapReturningUserDefinedConversionOfFailure_ReportsNothing()
+    {
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeSourceAsync("""
+            using Cspp.Results;
+
+            public sealed record CodedFailure(string Code, string Error) : Failure(Code, Error)
+            {
+                public static implicit operator string(CodedFailure failure) => failure.Code;
+            }
+
+            public static class Sample
+            {
+                public static void Run() => new Result<int>(1).Map<int, string>(_ => new CodedFailure("Code", "Error"));
+            }
+            """);
 
         Assert.That(diagnostics, Is.Empty);
     }

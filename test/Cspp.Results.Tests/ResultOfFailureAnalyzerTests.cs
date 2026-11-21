@@ -75,6 +75,7 @@ public class ResultOfFailureAnalyzerTests
     [TestCase("var mapped = Wrap(1).Map(_ => Failure.Unknown);")]
     [TestCase("var mapped = Wrap(1).Map<int, Failure>(_ => Failure.Unknown);")]
     [TestCase("var mapped = Wrap(1).Map(_ => new ValidationFailure(\"Code\", \"Error\"));")]
+    [TestCase("Result<int>? source = Wrap(1); var mapped = source?.Map(_ => Failure.Unknown);")]
     public async Task Analyze_GenericCallInferringResultOfFailure_ReportsDiagnostic(string statement)
     {
         ImmutableArray<Diagnostic> diagnostics = await AnalyzeStatementAsync(statement);
@@ -104,6 +105,7 @@ public class ResultOfFailureAnalyzerTests
     [TestCase("var bound = Wrap(1).Bind(_ => Wrap(Failure.Unknown));")]
     [TestCase("var chained = Wrap(Failure.Unknown).Map(failure => failure).Bind(Wrap);")]
     [TestCase("var same = Identity(Wrap(Failure.Unknown));")]
+    [TestCase("var first = First(new[] { Wrap(Failure.Unknown) });")]
     public async Task Analyze_CallsChainedOnResultOfFailure_ReportsOnlyFirstCall(string statement)
     {
         ImmutableArray<Diagnostic> diagnostics = await AnalyzeStatementAsync(statement);
@@ -112,6 +114,47 @@ public class ResultOfFailureAnalyzerTests
         string flaggedText = diagnostic.Location.SourceTree!.GetText().ToString(diagnostic.Location.SourceSpan);
 
         Assert.That(flaggedText, Is.EqualTo("Wrap"));
+    }
+
+    [Test]
+    public async Task Analyze_GenericCallWithArgumentOfTypeParameterConstrainedToFailure_ReportsDiagnostic()
+    {
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeSourceAsync("""
+            using Cspp.Results;
+
+            public static class Sample
+            {
+                public static void Run<TFailure>(TFailure failure) where TFailure : Failure => Wrap(failure);
+
+                private static Result<T> Wrap<T>(T value) => value;
+            }
+            """);
+
+        Assert.That(diagnostics.Select(AnalyzerHarness.FlaggedText), Is.EqualTo(new[] { "Wrap" }));
+    }
+
+    [Test]
+    public async Task Analyze_QueryClauseInferringResultOfFailure_ReportsAtClause()
+    {
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeSourceAsync("""
+            using System;
+            using Cspp.Results;
+
+            public static class QueryExtensions
+            {
+                public static Result<TOut> Select<T, TOut>(this Result<T> result, Func<T, TOut> selector) => default;
+            }
+
+            public static class Sample
+            {
+                public static void Run()
+                {
+                    var selected = from value in new Result<int>(1) select Failure.Unknown;
+                }
+            }
+            """);
+
+        Assert.That(diagnostics.Select(AnalyzerHarness.FlaggedText), Is.EqualTo(new[] { "select Failure.Unknown" }));
     }
 
     [Test]
