@@ -79,12 +79,10 @@ public class ResultTests
     [Test]
     public void ImplicitConversion_FromNullFailure_ThrowsArgumentNullException()
     {
+        static Result Convert(Failure failure) => failure;
+
         Assert.That(
-            () =>
-            {
-                Result result = (Failure)null!;
-                return result;
-            },
+            () => Convert(null!),
             Throws.TypeOf<ArgumentNullException>().With.Property("ParamName").EqualTo("failure"));
     }
 
@@ -104,17 +102,15 @@ public class ResultTests
     }
 
     [Test]
+    public void Switch_OnSuccess_MatchesSuccess()
+    {
+        Assert.That(Describe(Result.Success), Is.EqualTo("success"));
+    }
+
+    [Test]
     public void Switch_OnDefault_MatchesUninitializedFailure()
     {
-        Result result = default;
-
-        string code = result switch
-        {
-            Success => "success",
-            Failure failure => failure.Code
-        };
-
-        Assert.That(code, Is.EqualTo(Failure.Uninitialized.Code));
+        Assert.That(Describe(default), Is.EqualTo(Failure.Uninitialized.Code));
     }
 
     [Test]
@@ -176,5 +172,31 @@ public class ResultTests
         long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
 
         Assert.That(allocated, Is.Zero);
+    }
+
+    [Test]
+    public void Value_OnSuccess_ReturnsSuccess()
+    {
+        Result result = Result.Success;
+
+        Assert.That(result.Value, Is.SameAs(Result.Success));
+    }
+
+    [Test]
+    public void Value_OnFailure_ReturnsFailure()
+    {
+        Result result = Failure.Unknown;
+
+        Assert.That(result.Value, Is.SameAs(Failure.Unknown));
+    }
+
+    // One exhaustive switch shared by the switch tests, so each of its arms is reached by one of them.
+    private static string Describe(Result result)
+    {
+        return result switch
+        {
+            Success => "success",
+            Failure failure => failure.Code
+        };
     }
 }

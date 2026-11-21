@@ -39,6 +39,21 @@ wrapping or casting is needed. Because the union's cases are known, the switch i
 arm. If you only need to check which case you have, `result.IsSuccess` and `result.IsFailure` are also available, and
 `TryGetValue` gives you the case without pattern matching.
 
+To transform a result or chain steps that can fail without a `switch` at each step, use `Map`, `Bind`, `Match` and
+`GetValueOrDefault`:
+
+```csharp
+Result<Order> order = Parse(text)
+    .Bind(FindCustomer)                     // Result<Customer> FindCustomer(int id)
+    .Map(customer => new Order(customer));  // a failure from Parse or FindCustomer passes through
+
+string summary = order.Match(o => $"Order for {o.Customer.Name}", failure => failure.Error);
+int quantity = Parse(text).GetValueOrDefault(1);
+```
+
+`Map` is for steps that always succeed, and `Bind` is for steps that return a `Result<T>` of their own. On a failure,
+neither calls its delegate. `GetValueOrDefault()` without a default value returns `default(T)` on a failure.
+
 For the non-generic `Result`, return `Result.Success` or a `Failure`.
 
 A success value may be `null` when `T` allows it (for example `Result<string?>`).
@@ -55,8 +70,22 @@ package includes an analyzer that reports this as a compile error:
 Result<Failure> result = default; // CSPP0001 compile error
 ```
 
-The check covers types written in source, including type parameters constrained to `Failure`. It does not see a
-`Result<Failure>` that only exists through generic inference, such as a generic method called with a `Failure` argument.
+The check covers types written in source, including type parameters constrained to `Failure`, and method calls whose
+type arguments make them return `Result<T>` with a `Failure` as `T`, such as `result.Map(_ => Failure.Unknown)`. That
+includes members of generic types and of extension blocks. To fail from inside a step, use `Bind` instead. It does not
+see a `Result<Failure>` nested inside another return type, such as a generic method returning `Task<Result<T>>`, or
+one reached through a property or a delegate.
+
+`Map` stores whatever its delegate returns as the success value, so a `Failure` returned under a broader type such as
+`object` would become a success holding a failure. The analyzer reports that as a compile error too:
+
+```csharp
+Result<object> mapped = result.Map<int, object>(_ => Failure.Unknown); // CSPP0002 compile error
+```
+
+To fail from inside a step, use `Bind` and return the failure as a `Result`. The check looks at lambdas and method
+groups passed to `Map` directly, by the static type of what they return. It does not see a delegate stored in a
+variable first, or a `Failure` returned as `object`.
 
 ## Requirements
 

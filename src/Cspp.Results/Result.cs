@@ -81,6 +81,8 @@ public readonly record struct Result<T> : IUnion
 
     public object? Value => IsSuccess ? value : state.Failure;
 
+    internal Failure Failure => state.Failure;
+
     public bool TryGetValue([MaybeNullWhen(false)] out T value)
     {
         value = IsSuccess ? this.value : default;
