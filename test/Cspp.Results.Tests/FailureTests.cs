@@ -73,6 +73,17 @@ public class FailureTests
     }
 
     [Test]
+    public void Exception_ComparedToOtherPredefinedFailures_HasDistinctCode()
+    {
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(Failure.Exception.Code, Is.EqualTo("Failure.Exception"));
+            Assert.That(Failure.Exception.Code, Is.Not.EqualTo(Failure.Unknown.Code));
+            Assert.That(Failure.Exception.Code, Is.Not.EqualTo(Failure.Uninitialized.Code));
+        }
+    }
+
+    [Test]
     public void CodeAndError_AreGetterOnly()
     {
         // with-expressions and object initializers cannot assign these properties after
