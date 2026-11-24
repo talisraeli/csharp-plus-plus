@@ -859,6 +859,151 @@ public partial class ResultExtensionsTests
         }
     }
 
+    [Test]
+    public void Ensure_OnSuccessThatHolds_ReturnsSameResult()
+    {
+        Result<int> result = 42;
+
+        Result<int> ensured = result.Ensure(value => value > 0, NegativeFailure);
+
+        Assert.That(ensured, Is.EqualTo(result));
+    }
+
+    [Test]
+    public void Ensure_OnSuccessThatDoesNotHold_ReturnsFailure()
+    {
+        Result<int> result = -1;
+
+        Result<int> ensured = result.Ensure(value => value > 0, NegativeFailure);
+
+        Assert.That(FailureOf(ensured), Is.SameAs(NegativeFailure));
+    }
+
+    [Test]
+    public void Ensure_OnFailure_ReturnsSameFailureWithoutCallingPredicate()
+    {
+        Result<int> result = ParseFailure;
+        bool called = false;
+
+        Result<int> ensured = result.Ensure(
+            _ =>
+            {
+                called = true;
+                return false;
+            },
+            NegativeFailure);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(FailureOf(ensured), Is.SameAs(ParseFailure));
+            Assert.That(called, Is.False);
+        }
+    }
+
+    [Test]
+    public void Ensure_WithNullPredicate_ThrowsArgumentNullException()
+    {
+        Result<int> result = 42;
+
+        Assert.That(
+            () => result.Ensure(null!, NegativeFailure),
+            Throws.TypeOf<ArgumentNullException>().With.Property("ParamName").EqualTo("predicate"));
+    }
+
+    [Test]
+    public void Ensure_WithNullFailure_ThrowsArgumentNullException()
+    {
+        Result<int> result = 42;
+
+        Assert.That(
+            () => result.Ensure(value => value > 0, (Failure)null!),
+            Throws.TypeOf<ArgumentNullException>().With.Property("ParamName").EqualTo("failure"));
+    }
+
+    [Test]
+    public void EnsureWithFailureForValue_OnSuccessThatDoesNotHold_ReturnsFailureForValue()
+    {
+        Result<int> result = -1;
+
+        Result<int> ensured = result.Ensure(
+            value => value > 0,
+            value => new Failure("Validate.Negative", $"{value} is negative."));
+
+        Assert.That(FailureOf(ensured)?.Error, Is.EqualTo("-1 is negative."));
+    }
+
+    [Test]
+    public void EnsureWithFailureForValue_OnSuccessThatHolds_ReturnsSameResultWithoutBuildingFailure()
+    {
+        Result<int> result = 42;
+        bool called = false;
+
+        Result<int> ensured = result.Ensure(
+            value => value > 0,
+            _ =>
+            {
+                called = true;
+                return NegativeFailure;
+            });
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(ensured, Is.EqualTo(result));
+            Assert.That(called, Is.False);
+        }
+    }
+
+    [Test]
+    public void EnsureWithFailureForValue_OnFailure_ReturnsSameFailureWithoutCallingPredicate()
+    {
+        Result<int> result = ParseFailure;
+        bool called = false;
+
+        Result<int> ensured = result.Ensure(
+            _ =>
+            {
+                called = true;
+                return false;
+            },
+            _ => NegativeFailure);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(FailureOf(ensured), Is.SameAs(ParseFailure));
+            Assert.That(called, Is.False);
+        }
+    }
+
+    [Test]
+    public void EnsureWithFailureForValue_WithNullPredicate_ThrowsArgumentNullException()
+    {
+        Result<int> result = 42;
+
+        Assert.That(
+            () => result.Ensure(null!, _ => NegativeFailure),
+            Throws.TypeOf<ArgumentNullException>().With.Property("ParamName").EqualTo("predicate"));
+    }
+
+    [Test]
+    public void EnsureWithFailureForValue_WithNullFailure_ThrowsArgumentNullException()
+    {
+        Result<int> result = 42;
+
+        Assert.That(
+            () => result.Ensure(value => value > 0, (Func<int, Failure>)null!),
+            Throws.TypeOf<ArgumentNullException>().With.Property("ParamName").EqualTo("failure"));
+    }
+
+    [Test]
+    public void EnsureWithFailureForValue_WhenFailureReturnsNull_ThrowsArgumentNullException()
+    {
+        Result<int> result = -1;
+
+        Assert.That(
+            () => result.Ensure(value => value > 0, _ => null!),
+            Throws.TypeOf<ArgumentNullException>().With.Property("ParamName").EqualTo("failure"));
+    }
+
     private static Result<int> Parse(string text)
     {
         return int.TryParse(text, out int value) ? value : ParseFailure;

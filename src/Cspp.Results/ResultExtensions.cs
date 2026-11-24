@@ -176,6 +176,54 @@ public static partial class ResultExtensions
 
             return result.IsSuccess ? result : ApplyFailureMap(result.Failure, map);
         }
+
+        /// <summary>
+        /// Checks a condition on the success value, and turns the success into <paramref name="failure" /> if it doesn't
+        /// hold. A failure is passed through unchanged without checking.
+        /// </summary>
+        /// <param name="predicate">Called with the success value; returns whether the value is valid.</param>
+        /// <param name="failure">The failure to return if <paramref name="predicate" /> returns <see langword="false" />.</param>
+        /// <returns>The same result, or <paramref name="failure" /> if the success value is not valid.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// <paramref name="predicate" /> or <paramref name="failure" /> is <see langword="null" />.
+        /// </exception>
+        public Result<T> Ensure(Func<T, bool> predicate, Failure failure)
+        {
+            ArgumentNullException.ThrowIfNull(predicate);
+            ArgumentNullException.ThrowIfNull(failure);
+
+            return result.IsFailure || predicate(result.SuccessValue) ? result : failure;
+        }
+
+        /// <summary>
+        /// Checks a condition on the success value, and turns the success into the failure <paramref name="failure" />
+        /// builds from the value if it doesn't hold. A failure is passed through unchanged without checking.
+        /// </summary>
+        /// <param name="predicate">Called with the success value; returns whether the value is valid.</param>
+        /// <param name="failure">
+        /// Called with the success value if <paramref name="predicate" /> returns <see langword="false" />, and returns
+        /// the failure, for example with the value in its message. It must not return <see langword="null" />.
+        /// </param>
+        /// <returns>The same result, or the failure for the value if the success value is not valid.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// <paramref name="predicate" /> or <paramref name="failure" /> is <see langword="null" />, or
+        /// <paramref name="failure" /> returned <see langword="null" />.
+        /// </exception>
+        public Result<T> Ensure(Func<T, bool> predicate, Func<T, Failure> failure)
+        {
+            ArgumentNullException.ThrowIfNull(predicate);
+            ArgumentNullException.ThrowIfNull(failure);
+
+            if (result.IsFailure || predicate(result.SuccessValue))
+            {
+                return result;
+            }
+
+            return failure(result.SuccessValue)
+                ?? throw new ArgumentNullException(
+                    nameof(failure),
+                    "The failure delegate returned null instead of a Failure.");
+        }
     }
 
     extension(Result result)

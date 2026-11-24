@@ -3,12 +3,13 @@
 A `Result` type for returning success or failure without throwing exceptions. It is built on C# union types (`[Union]` /
 `IUnion`).
 
-| Type        | Description                                                                                                                                |
-|-------------|--------------------------------------------------------------------------------------------------------------------------------------------|
-| `Result`    | A union of `Success` or `Failure`.                                                                                                         |
-| `Result<T>` | A union of a `T` value or `Failure`.                                                                                                       |
-| `Success`   | A singleton, obtained through `Result.Success`, marking success for the non-generic `Result`.                                              |
-| `Failure`   | A `Code` and an `Error` message, neither null nor whitespace. Predefined: `Failure.Unknown`, `Failure.Uninitialized`, `Failure.Exception`. |
+| Type               | Description                                                                                                                                |
+|--------------------|--------------------------------------------------------------------------------------------------------------------------------------------|
+| `Result`           | A union of `Success` or `Failure`.                                                                                                         |
+| `Result<T>`        | A union of a `T` value or `Failure`.                                                                                                       |
+| `Success`          | A singleton, obtained through `Result.Success`, marking success for the non-generic `Result`.                                              |
+| `Failure`          | A `Code` and an `Error` message, neither null nor whitespace. Predefined: `Failure.Unknown`, `Failure.Uninitialized`, `Failure.Exception`. |
+| `AggregateFailure` | A `Failure` holding several failures in `Failures`, with the code `Failure.Multiple`. `Result.CombineAll` returns it.                      |
 
 ## Creating and matching results
 
@@ -51,6 +52,36 @@ neither calls its delegate. `GetValueOrDefault()` without a default value return
 
 To fail from inside a step, use `Bind` and return the failure. Returning a `Failure` from `Map` is a compile error; see
 [Analyzers](analyzers.md).
+
+## Validating and combining results
+
+To check a condition on the success value, use `Ensure`. A success that fails the check becomes the failure you pass, or
+the one a delegate builds from the value; a failure passes through without checking:
+
+```csharp
+Result<Order> order = Parse(text)
+    .Ensure(o => o.Quantity > 0, new Failure("Order.Quantity", "Quantity must be positive."))
+    .Ensure(o => o.Total <= limit, o => new Failure("Order.Limit", $"{o.Total} is over the limit."));
+```
+
+To turn several results into one, use `Result.Combine`, which stops at the first failure, or `Result.CombineAll`, which
+reports every failure. Both take any number of results, or a collection:
+
+```csharp
+Result valid = Result.Combine(ValidateName(name), ValidateEmail(email));        // success, or the first failure
+Result<IReadOnlyList<int>> ids = Result.Combine(texts.Select(Parse));           // every value, or the first failure
+
+Result checkedAll = Result.CombineAll(ValidateName(name), ValidateEmail(email));
+string message = checkedAll switch
+{
+    Success => "Valid.",
+    AggregateFailure all => string.Join(" ", all.Failures.Select(f => f.Error)), // several failures
+    Failure one => one.Error,                                                    // exactly one failure
+};
+```
+
+`CombineAll` returns a single failure unchanged, and an `AggregateFailure` only when more than one result fails. Two
+aggregate failures are equal when they hold equal failures in the same order.
 
 ## Side effects and changing a failure
 
