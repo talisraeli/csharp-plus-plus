@@ -8,6 +8,8 @@ public class ResultExtensionsTests
 {
     private static readonly Failure ParseFailure = new("Parse.Invalid", "Not a number.");
 
+    private static readonly Failure NegativeFailure = new("Validate.Negative", "The number is negative.");
+
     [Test]
     public void GetValueOrDefault_OnSuccess_ReturnsValue()
     {
@@ -291,8 +293,285 @@ public class ResultExtensionsTests
         }
     }
 
+    [Test]
+    public void BindToResult_OnSuccess_ReturnsBindResult()
+    {
+        Result<int> result = -1;
+
+        Result bound = result.Bind(Validate);
+
+        Assert.That(bound, Is.EqualTo((Result)NegativeFailure));
+    }
+
+    [Test]
+    public void BindToResult_OnFailure_ReturnsSameFailureWithoutCallingBind()
+    {
+        Result<int> result = ParseFailure;
+        bool called = false;
+
+        Result bound = result.Bind(value =>
+        {
+            called = true;
+            return Validate(value);
+        });
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(bound.TryGetValue(out Failure? failure), Is.True);
+            Assert.That(failure, Is.SameAs(ParseFailure));
+            Assert.That(called, Is.False);
+        }
+    }
+
+    [Test]
+    public void BindToResult_WithNullBind_ThrowsArgumentNullException()
+    {
+        Result<int> result = 42;
+
+        Assert.That(
+            () => result.Bind((Func<int, Result>)null!),
+            Throws.TypeOf<ArgumentNullException>().With.Property("ParamName").EqualTo("bind"));
+    }
+
+    [Test]
+    public void ToResult_OnSuccess_ReturnsSuccess()
+    {
+        Result<int> result = 42;
+
+        Assert.That(result.ToResult().IsSuccess, Is.True);
+    }
+
+    [Test]
+    public void ToResult_OnFailure_ReturnsSameFailure()
+    {
+        Result<int> result = ParseFailure;
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.ToResult().TryGetValue(out Failure? failure), Is.True);
+            Assert.That(failure, Is.SameAs(ParseFailure));
+        }
+    }
+
+    [Test]
+    public void ToResult_OnDefault_ReturnsUninitializedFailure()
+    {
+        Result<int> result = default;
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.ToResult().TryGetValue(out Failure? failure), Is.True);
+            Assert.That(failure, Is.SameAs(Failure.Uninitialized));
+        }
+    }
+
+    [Test]
+    public void MatchNonGeneric_OnSuccess_CallsOnSuccess()
+    {
+        Result result = Result.Success;
+
+        string message = result.Match(() => "success", failure => $"failure {failure.Code}");
+
+        Assert.That(message, Is.EqualTo("success"));
+    }
+
+    [Test]
+    public void MatchNonGeneric_OnFailure_CallsOnFailureWithFailure()
+    {
+        Result result = ParseFailure;
+
+        Failure? received = result.Match(() => (Failure?)null, failure => failure);
+
+        Assert.That(received, Is.SameAs(ParseFailure));
+    }
+
+    [Test]
+    public void MatchNonGeneric_OnDefault_CallsOnFailureWithUninitialized()
+    {
+        Result result = default;
+
+        Failure? received = result.Match(() => (Failure?)null, failure => failure);
+
+        Assert.That(received, Is.SameAs(Failure.Uninitialized));
+    }
+
+    [Test]
+    public void MatchNonGeneric_WithNullOnSuccess_ThrowsArgumentNullException()
+    {
+        Result result = Result.Success;
+
+        Assert.That(
+            () => result.Match(null!, _ => 0),
+            Throws.TypeOf<ArgumentNullException>().With.Property("ParamName").EqualTo("onSuccess"));
+    }
+
+    [Test]
+    public void MatchNonGeneric_WithNullOnFailure_ThrowsArgumentNullException()
+    {
+        Result result = Result.Success;
+
+        Assert.That(
+            () => result.Match(() => 0, null!),
+            Throws.TypeOf<ArgumentNullException>().With.Property("ParamName").EqualTo("onFailure"));
+    }
+
+    [Test]
+    public void MapNonGeneric_OnSuccess_ReturnsMappedValue()
+    {
+        Result result = Result.Success;
+
+        Result<int> mapped = result.Map(() => 42);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(mapped.TryGetValue(out int value), Is.True);
+            Assert.That(value, Is.EqualTo(42));
+        }
+    }
+
+    [Test]
+    public void MapNonGeneric_OnFailure_ReturnsSameFailureWithoutCallingMap()
+    {
+        Result result = ParseFailure;
+        bool called = false;
+
+        Result<int> mapped = result.Map(() =>
+        {
+            called = true;
+            return 42;
+        });
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(mapped.TryGetValue(out Failure? failure), Is.True);
+            Assert.That(failure, Is.SameAs(ParseFailure));
+            Assert.That(called, Is.False);
+        }
+    }
+
+    [Test]
+    public void MapNonGeneric_WithNullMap_ThrowsArgumentNullException()
+    {
+        Result result = Result.Success;
+
+        Assert.That(
+            () => result.Map((Func<int>)null!),
+            Throws.TypeOf<ArgumentNullException>().With.Property("ParamName").EqualTo("map"));
+    }
+
+    [Test]
+    public void BindNonGeneric_OnSuccess_ReturnsBindResult()
+    {
+        Result result = Result.Success;
+
+        Result bound = result.Bind(() => Validate(-1));
+
+        Assert.That(bound, Is.EqualTo((Result)NegativeFailure));
+    }
+
+    [Test]
+    public void BindNonGeneric_OnFailure_ReturnsSameFailureWithoutCallingBind()
+    {
+        Result result = ParseFailure;
+        bool called = false;
+
+        Result bound = result.Bind(() =>
+        {
+            called = true;
+            return Validate(1);
+        });
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(bound, Is.EqualTo((Result)ParseFailure));
+            Assert.That(called, Is.False);
+        }
+    }
+
+    [Test]
+    public void BindNonGeneric_WithNullBind_ThrowsArgumentNullException()
+    {
+        Result result = Result.Success;
+
+        Assert.That(
+            () => result.Bind((Func<Result>)null!),
+            Throws.TypeOf<ArgumentNullException>().With.Property("ParamName").EqualTo("bind"));
+    }
+
+    [Test]
+    public void BindNonGenericToValue_OnSuccess_ReturnsBindResult()
+    {
+        Result result = Result.Success;
+
+        Result<int> bound = result.Bind(() => Parse("42"));
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(bound.TryGetValue(out int value), Is.True);
+            Assert.That(value, Is.EqualTo(42));
+        }
+    }
+
+    [Test]
+    public void BindNonGenericToValue_OnFailure_ReturnsSameFailureWithoutCallingBind()
+    {
+        Result result = ParseFailure;
+        bool called = false;
+
+        Result<int> bound = result.Bind(() =>
+        {
+            called = true;
+            return Parse("42");
+        });
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(bound.TryGetValue(out Failure? failure), Is.True);
+            Assert.That(failure, Is.SameAs(ParseFailure));
+            Assert.That(called, Is.False);
+        }
+    }
+
+    [Test]
+    public void BindNonGenericToValue_WithNullBind_ThrowsArgumentNullException()
+    {
+        Result result = Result.Success;
+
+        Assert.That(
+            () => result.Bind((Func<Result<int>>)null!),
+            Throws.TypeOf<ArgumentNullException>().With.Property("ParamName").EqualTo("bind"));
+    }
+
+    [Test]
+    public void BindAndMap_WhenMixingResultAndResultOfT_StopsAtFirstFailure()
+    {
+        static Result<int> Run(string text)
+        {
+            return Parse(text)
+                .Bind(value => Validate(value).Map(() => value))
+                .Map(value => value * 2);
+        }
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(Run("21").GetValueOrDefault(), Is.EqualTo(42));
+            Assert.That(Run("-1").Match(_ => string.Empty, failure => failure.Code), Is.EqualTo(NegativeFailure.Code));
+            Assert.That(Run("abc").Match(_ => string.Empty, failure => failure.Code), Is.EqualTo(ParseFailure.Code));
+        }
+    }
+
     private static Result<int> Parse(string text)
     {
         return int.TryParse(text, out int value) ? value : ParseFailure;
+    }
+
+    private static Result Validate(int value)
+    {
+        if (value < 0)
+        {
+            return NegativeFailure;
+        }
+
+        return Result.Success;
     }
 }
