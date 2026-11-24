@@ -13,6 +13,14 @@ public record Failure
         "The result was not initialized with a value or a failure.");
 
     /// <summary>
+    /// The failure <c>Result.Try</c> and <c>Result.TryAsync</c> return when the code they run throws and the caller
+    /// passes no <c>onException</c> delegate.
+    /// </summary>
+    public static readonly Failure Exception = new(
+        Join(".", nameof(Failure), nameof(Exception)),
+        "An exception was thrown.");
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="Failure" /> class.
     /// </summary>
     /// <param name="code">The failure code. Cannot be null, empty, or whitespace.</param>

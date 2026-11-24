@@ -3,12 +3,12 @@
 A `Result` type for returning success or failure without throwing exceptions. It is built on C# union types (`[Union]` /
 `IUnion`).
 
-| Type        | Description                                                                                                           |
-|-------------|-----------------------------------------------------------------------------------------------------------------------|
-| `Result`    | A union of `Success` or `Failure`.                                                                                    |
-| `Result<T>` | A union of a `T` value or `Failure`.                                                                                  |
-| `Success`   | A singleton, obtained through `Result.Success`, marking success for the non-generic `Result`.                         |
-| `Failure`   | A `Code` and an `Error` message, neither null nor whitespace. Predefined: `Failure.Unknown`, `Failure.Uninitialized`. |
+| Type        | Description                                                                                                                                |
+|-------------|--------------------------------------------------------------------------------------------------------------------------------------------|
+| `Result`    | A union of `Success` or `Failure`.                                                                                                         |
+| `Result<T>` | A union of a `T` value or `Failure`.                                                                                                       |
+| `Success`   | A singleton, obtained through `Result.Success`, marking success for the non-generic `Result`.                                              |
+| `Failure`   | A `Code` and an `Error` message, neither null nor whitespace. Predefined: `Failure.Unknown`, `Failure.Uninitialized`, `Failure.Exception`. |
 
 ## Creating and matching results
 
@@ -67,6 +67,35 @@ Result<User> user = FindUser(id)
 
 The non-generic `Result` has the same three members; its `Tap` takes a delegate with no value. `MapFailure` throws
 `ArgumentNullException` if its delegate returns `null`.
+
+## Turning exceptions into failures
+
+To call code that throws, such as `int.Parse` or a file API, use `Result.Try`. It returns the value, or a failure if the
+code throws. The failure is `Failure.Exception`, unless you pass `onException`, which receives the exception and returns
+the failure to use, for example after logging it:
+
+```csharp
+Result<int> parsed = Result.Try(() => int.Parse(text));
+Result<int> quantity = Result.Try(() => int.Parse(text), _ => new Failure("Quantity.Invalid", "Not a number."));
+Result saved = Result.Try(
+    () => File.WriteAllText(path, content),
+    exception =>
+    {
+        logger.LogError(exception, "Save failed");
+        return new Failure("Save.Failed", exception.Message);
+    });
+```
+
+`Result.TryAsync` does the same for asynchronous code:
+
+```csharp
+Result<string> content = await Result.TryAsync(() => File.ReadAllTextAsync(path, cancellationToken));
+```
+
+`Try` catches every exception, including `OperationCanceledException`. `TryAsync` catches every exception except
+`OperationCanceledException`, so a cancelled operation still ends as cancelled. A lambda that assigns a value, such as
+`() => done = true`, returns that value and so creates a `Result<T>`; write `() => { done = true; }` for a `Result`.
+`onException` must not return `null`.
 
 ## Asynchronous steps
 
