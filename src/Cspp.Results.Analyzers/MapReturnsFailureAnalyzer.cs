@@ -7,8 +7,8 @@ using Microsoft.CodeAnalysis.Operations;
 namespace Cspp.Results.Analyzers;
 
 /// <summary>
-/// Reports a <c>Map</c> or <c>MapAsync</c> delegate that returns a <c>Failure</c> while the mapped value type is broader,
-/// such as <c>object</c>. <c>Map</c> stores whatever the delegate returns as the success value, so the result would be a success
+/// Reports a <c>Map</c>, <c>MapAsync</c> or <c>Select</c> delegate, or the result selector of <c>SelectMany</c>, that
+/// returns a <c>Failure</c> while the mapped value type is broader, such as <c>object</c>. <c>Map</c> stores whatever the delegate returns as the success value, so the result would be a success
 /// holding a failure. When the mapped value type is itself a <c>Failure</c>, <c>CSPP0001</c> reports the call instead.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
@@ -21,6 +21,8 @@ public sealed class MapReturnsFailureAnalyzer : DiagnosticAnalyzer
 
     private const string MapMethodName = "Map";
     private const string MapAsyncMethodName = "MapAsync";
+    private const string SelectMethodName = "Select";
+    private const string SelectManyMethodName = "SelectMany";
 
     private static readonly DiagnosticDescriptor Rule = new(
         DiagnosticId,
@@ -61,7 +63,7 @@ public sealed class MapReturnsFailureAnalyzer : DiagnosticAnalyzer
         IMethodSymbol method = invocation.TargetMethod;
 
         // A mapped value type that is itself a Failure is reported by CSPP0001.
-        if (method.Name is not (MapMethodName or MapAsyncMethodName)
+        if (method.Name is not (MapMethodName or MapAsyncMethodName or SelectMethodName or SelectManyMethodName)
             || !IsDeclaredIn(method, extensions)
             || types.GetAwaitedResultValueType(method.ReturnType) is not { } valueType
             || types.IsFailure(valueType))
@@ -69,7 +71,13 @@ public sealed class MapReturnsFailureAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        foreach (IArgumentOperation argument in invocation.Arguments)
+        // SelectMany's first delegate returns a Result, so a Failure there is a failed step. Only its result selector, the
+        // last argument, maps a value.
+        IEnumerable<IArgumentOperation> mappingArguments = method.Name == SelectManyMethodName
+            ? [invocation.Arguments[invocation.Arguments.Length - 1]]
+            : invocation.Arguments;
+
+        foreach (IArgumentOperation argument in mappingArguments)
         {
             if (argument.Value is not IDelegateCreationOperation delegateCreation)
             {
