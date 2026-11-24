@@ -65,6 +65,16 @@ distributions for a few cases, so run the benchmarks on your own hardware before
 | OneOf                      | 1.18 ns, 0 B    | 1.90 ns, 0 B    |
 | Ardalis.Result             | 0.86 ns, 0 B    | 0.87 ns, 0 B    |
 
+**Async pipeline** (the pipeline above chained on a `Task<Result<T>>`, Cspp.Results only, from a separate run on the
+same machine). `AsyncCompleted` parses into a task that has already completed, so it measures only the task members;
+`Async` parses into a task that awaits `Task.Yield()` first, so every later step runs as a continuation:
+
+| Chain          | `42` (success)   | `abc` (parse fails) | `-5` (validation fails) |
+|----------------|------------------|---------------------|-------------------------|
+| Sync           | 12.8 ns, 0 B     | 13.9 ns, 32 B       | 11.0 ns, 32 B           |
+| AsyncCompleted | 51.5 ns, 336 B   | 51.1 ns, 296 B      | 49.5 ns, 296 B          |
+| Async          | 662 ns, 517 B    | 734 ns, 549 B       | 660 ns, 548 B           |
+
 In short:
 
 - In the pipeline, Cspp.Results was the fastest result library on all three paths (CSharpFunctionalExtensions is within
@@ -75,3 +85,5 @@ In short:
   Matching takes about 2 ns or less everywhere except FluentResults, which allocates on every read.
 - Exceptions are cheapest when nothing fails, because there is no wrapper, but about 90 to 105 times slower than
   Cspp.Results when something does.
+- Chaining on a task adds about 36 to 40 ns and about 300 B, one task per step, to a three-step chain. When a step
+  really waits, resuming after the wait costs far more than the task members.
