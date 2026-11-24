@@ -10,12 +10,24 @@ internal sealed class ResultsTypes
     private const string ResultMetadataName = "Cspp.Results.Result`1";
     private const string FailureMetadataName = "Cspp.Results.Failure";
     private const string ResultExtensionsMetadataName = "Cspp.Results.ResultExtensions";
+    private const string TaskMetadataName = "System.Threading.Tasks.Task`1";
+    private const string ValueTaskMetadataName = "System.Threading.Tasks.ValueTask`1";
 
-    private ResultsTypes(INamedTypeSymbol result, INamedTypeSymbol failure, INamedTypeSymbol? resultExtensions)
+    private readonly INamedTypeSymbol? task;
+    private readonly INamedTypeSymbol? valueTask;
+
+    private ResultsTypes(
+        INamedTypeSymbol result,
+        INamedTypeSymbol failure,
+        INamedTypeSymbol? resultExtensions,
+        INamedTypeSymbol? task,
+        INamedTypeSymbol? valueTask)
     {
         Result = result;
         Failure = failure;
         ResultExtensions = resultExtensions;
+        this.task = task;
+        this.valueTask = valueTask;
     }
 
     /// <summary>Gets <c>Result&lt;T&gt;</c>.</summary>
@@ -42,7 +54,12 @@ internal sealed class ResultsTypes
 
         return result is null || failure is null
             ? null
-            : new ResultsTypes(result, failure, compilation.GetTypeByMetadataName(ResultExtensionsMetadataName));
+            : new ResultsTypes(
+                result,
+                failure,
+                compilation.GetTypeByMetadataName(ResultExtensionsMetadataName),
+                compilation.GetTypeByMetadataName(TaskMetadataName),
+                compilation.GetTypeByMetadataName(ValueTaskMetadataName));
     }
 
     /// <summary>
@@ -69,6 +86,31 @@ internal sealed class ResultsTypes
     }
 
     /// <summary>
+    /// Gets the value type <c>T</c> of <paramref name="type" /> if it is a <c>Result&lt;T&gt;</c>, or a
+    /// <c>Task&lt;Result&lt;T&gt;&gt;</c> or <c>ValueTask&lt;Result&lt;T&gt;&gt;</c> that completes with one.
+    /// </summary>
+    /// <param name="type">The type to check.</param>
+    /// <returns><c>T</c>, or <see langword="null" /> if <paramref name="type" /> is none of these.</returns>
+    public ITypeSymbol? GetAwaitedResultValueType(ITypeSymbol type)
+    {
+        return GetResultValueType(type)
+            ?? (type is INamedTypeSymbol { TypeArguments.Length: 1 } named && IsTask(named.OriginalDefinition)
+                ? GetResultValueType(named.TypeArguments[0])
+                : null);
+    }
+
+    /// <summary>
+    /// Determines whether <paramref name="type" /> is a <c>Result&lt;T&gt;</c>, or a task that completes with one, whose
+    /// <c>T</c> is a failure type.
+    /// </summary>
+    /// <param name="type">The type to check.</param>
+    /// <returns><see langword="true" /> if <paramref name="type" /> is or completes with a result of a failure type.</returns>
+    public bool IsAwaitedResultOfFailure(ITypeSymbol type)
+    {
+        return GetAwaitedResultValueType(type) is { } valueType && IsFailure(valueType);
+    }
+
+    /// <summary>
     /// Determines whether <paramref name="type" /> is a <c>Result&lt;T&gt;</c> whose <c>T</c> is a failure type.
     /// </summary>
     /// <param name="type">The type to check.</param>
@@ -76,5 +118,11 @@ internal sealed class ResultsTypes
     public bool IsResultOfFailure(ITypeSymbol type)
     {
         return GetResultValueType(type) is { } valueType && IsFailure(valueType);
+    }
+
+    private bool IsTask(INamedTypeSymbol definition)
+    {
+        return SymbolEqualityComparer.Default.Equals(definition, task)
+            || SymbolEqualityComparer.Default.Equals(definition, valueTask);
     }
 }

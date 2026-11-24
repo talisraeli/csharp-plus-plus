@@ -81,6 +81,11 @@ public class ResultOfFailureAnalyzerTests
     [TestCase("Result ok = Result.Success; var mapped = ok.Map<Failure>(() => Failure.Unknown);")]
     [TestCase("Result ok = Result.Success; var bound = ok.Bind<Failure>(() => default);")]
     [TestCase("var bound = Wrap(1).Bind<int, Failure>(_ => default);")]
+    [TestCase("var mapped = Wrap(1).MapAsync(_ => Task.FromResult(Failure.Unknown));")]
+    [TestCase("var bound = Wrap(1).BindAsync<int, Failure>(_ => default!);")]
+    [TestCase("var mapped = WrapAsync(1).Map(_ => Failure.Unknown);")]
+    [TestCase("var mapped = WrapAsync(1).MapAsync(_ => Task.FromResult(Failure.Unknown));")]
+    [TestCase("var result = WrapAsync(Failure.Unknown);")]
     public async Task Analyze_GenericCallInferringResultOfFailure_ReportsDiagnostic(string statement)
     {
         ImmutableArray<Diagnostic> diagnostics = await AnalyzeStatementAsync(statement);
@@ -111,6 +116,7 @@ public class ResultOfFailureAnalyzerTests
     [TestCase("var chained = Wrap(Failure.Unknown).Map(failure => failure).Bind(Wrap);")]
     [TestCase("var same = Identity(Wrap(Failure.Unknown));")]
     [TestCase("var first = First(new[] { Wrap(Failure.Unknown) });")]
+    [TestCase("var mapped = Task.FromResult(Wrap(Failure.Unknown)).Map(failure => failure.Code);")]
     public async Task Analyze_CallsChainedOnResultOfFailure_ReportsOnlyFirstCall(string statement)
     {
         ImmutableArray<Diagnostic> diagnostics = await AnalyzeStatementAsync(statement);
@@ -119,6 +125,34 @@ public class ResultOfFailureAnalyzerTests
         string flaggedText = diagnostic.Location.SourceTree!.GetText().ToString(diagnostic.Location.SourceSpan);
 
         Assert.That(flaggedText, Is.EqualTo("Wrap"));
+    }
+
+    [Test]
+    public async Task Analyze_ValueTaskOfResultOfFailure_ReportsDiagnostic()
+    {
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeSourceAsync(
+            """
+            using System.Threading.Tasks;
+            using Cspp.Results;
+
+            public static class Sample
+            {
+                public static ValueTask<Result<T>> WrapAsync<T>(T value) => new(value);
+
+                public static void Run() => WrapAsync(Failure.Unknown);
+            }
+            """);
+
+        Assert.That(diagnostics.Select(AnalyzerHarness.FlaggedText), Is.EqualTo(new[] { "WrapAsync" }));
+    }
+
+    [TestCase("var task = Task.FromResult<Result<Failure>>(default);")]
+    [TestCase("var same = Identity<Result<Failure>>(default);")]
+    public async Task Analyze_TypeArgumentContainingResultOfFailure_ReportsOnlyTypeArgument(string statement)
+    {
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeStatementAsync(statement);
+
+        Assert.That(diagnostics.Select(AnalyzerHarness.FlaggedText), Is.EqualTo(new[] { "Failure" }));
     }
 
     [TestCase("var bound = Wrap(1).Bind<int, Failure>(_ => default);", "Bind")]
@@ -287,6 +321,12 @@ public class ResultOfFailureAnalyzerTests
     [TestCase("var bound = Wrap(1).Bind(_ => Failure.Unknown);")]
     [TestCase("var result = Wrap(Failure.Unknown.Code).ToResult();")]
     [TestCase("var first = System.Linq.Enumerable.First(new[] { Wrap(1) });")]
+    [TestCase("var mapped = Wrap(1).MapAsync(value => Task.FromResult(value.ToString()));")]
+    [TestCase("var bound = WrapAsync(1).BindAsync(value => WrapAsync(value.ToString()));")]
+    [TestCase("var code = WrapAsync(1).Match(_ => string.Empty, failure => failure.Code);")]
+    [TestCase("var task = Task.FromResult(1);")]
+    [TestCase("var empty = System.Array.Empty<int>();")]
+    [TestCase("var empty = System.Linq.Enumerable.Empty<int>();")]
     public async Task Analyze_GenericCallNotInferringResultOfFailure_ReportsNothing(string statement)
     {
         ImmutableArray<Diagnostic> diagnostics = await AnalyzeStatementAsync(statement);

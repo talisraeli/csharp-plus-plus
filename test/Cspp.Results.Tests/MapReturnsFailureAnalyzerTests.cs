@@ -39,6 +39,9 @@ public class MapReturnsFailureAnalyzerTests
     [TestCase("var mapped = Wrap(1).Map((System.Func<int, object>)(_ => Failure.Unknown));", "Failure.Unknown")]
     [TestCase("Result ok = Result.Success; var mapped = ok.Map<object>(() => Failure.Unknown);", "Failure.Unknown")]
     [TestCase("Result ok = Result.Success; var mapped = ok.Map(() => (object)Failure.Unknown);", "Failure.Unknown")]
+    [TestCase("var mapped = Wrap(1).MapAsync<int, object>(async _ => { await Task.Yield(); return Failure.Unknown; });", "Failure.Unknown")]
+    [TestCase("var mapped = WrapAsync(1).Map<int, object>(_ => Failure.Unknown);", "Failure.Unknown")]
+    [TestCase("var mapped = WrapAsync(1).MapAsync<int, object>(async _ => { await Task.Yield(); return GetFailure(); });", "GetFailure()")]
     public async Task Analyze_MapDelegateReturningFailure_ReportsAtReturnedExpression(string statement, string expected)
     {
         ImmutableArray<Diagnostic> diagnostics = await AnalyzeStatementAsync(statement);
@@ -89,6 +92,9 @@ public class MapReturnsFailureAnalyzerTests
     [TestCase("Result ok = Result.Success; var bound = ok.Bind(() => Failure.Unknown);")]
     [TestCase("Result ok = Result.Success; var mapped = ok.Map<object>(() => 1);")]
     [TestCase("var bound = Wrap(1).Bind(_ => Failure.Unknown);")]
+    [TestCase("var mapped = Wrap(1).MapAsync(value => Task.FromResult<object>(value));")]
+    [TestCase("var bound = Wrap(1).BindAsync<int, object>(_ => Task.FromResult<Result<object>>(Failure.Unknown));")]
+    [TestCase("var matched = WrapAsync(1).Match<int, object>(value => value, failure => failure);")]
     public async Task Analyze_MapNotReturningFailureAsValue_ReportsNothing(string statement)
     {
         ImmutableArray<Diagnostic> diagnostics = await AnalyzeStatementAsync(statement);

@@ -18,10 +18,11 @@ Result<Failure> result = default; // CSPP0001 compile error
 
 The check covers types written in source, including type parameters constrained to `Failure`, and method calls whose
 type arguments make them return `Result<T>` with a `Failure` as `T`, such as `result.Map(_ => Failure.Unknown)`. That
-includes members of generic types and of extension blocks. To fail from inside a step, use `Bind` instead.
+includes members of generic types and of extension blocks, and calls that return a `Task` or `ValueTask` of such a
+result, such as `result.MapAsync(_ => GetFailureAsync())`. To fail from inside a step, use `Bind` instead.
 
-It does not see a `Result<Failure>` nested inside another return type, such as a generic method returning
-`Task<Result<T>>`, or one reached through a property or a delegate.
+It does not see a `Result<Failure>` nested inside other return types, such as a generic method returning
+`List<Result<T>>`, or one reached through a property or a delegate.
 
 ## CSPP0002: Map returns a Failure
 
@@ -34,5 +35,7 @@ Result<object> mapped = result.Map<int, object>(_ => Failure.Unknown); // CSPP00
 
 To fail from inside a step, use `Bind` and return the failure as a `Result`.
 
-The check covers `Map` on both `Result<T>` and the non-generic `Result`. It looks at lambdas and method groups passed to `Map` directly, by the static type of what they return. It does
-not see a delegate stored in a variable first, or a `Failure` returned as `object`.
+The check covers `Map` on `Result<T>`, on the non-generic `Result` and on a `Task<Result<T>>`, and `MapAsync`, where
+it looks at what an `async` lambda returns. It looks at lambdas and method groups passed to these members directly, by
+the static type of what they return. It does not see a delegate stored in a variable first, or a `Failure` returned as
+`object`.
