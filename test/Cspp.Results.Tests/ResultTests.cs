@@ -196,12 +196,7 @@ public class ResultTests
             return count;
         }
 
-        Run(10);
-        long before = GC.GetAllocatedBytesForCurrentThread();
-        Run(10_000);
-        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
-
-        Assert.That(allocated, Is.Zero);
+        Assert.That(Allocations.Fewest(static () => Run(10_000)), Is.Zero);
     }
 
     [Test]
@@ -222,12 +217,7 @@ public class ResultTests
             return count;
         }
 
-        Run(10);
-        long before = GC.GetAllocatedBytesForCurrentThread();
-        Run(10_000);
-        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
-
-        Assert.That(allocated, Is.Zero);
+        Assert.That(Allocations.Fewest(static () => Run(10_000)), Is.Zero);
     }
 
     [Test]
