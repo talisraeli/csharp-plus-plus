@@ -54,7 +54,23 @@ To fail from inside a step, use `Bind` and return the failure. Returning a `Fail
 
 ## The non-generic `Result`
 
-For the non-generic `Result`, return `Result.Success` or a `Failure`.
+For the non-generic `Result`, return `Result.Success` or a `Failure`. It has `Match`, `Map` and `Bind` too, with
+delegates that take no value, so steps returning `Result` and `Result<T>` chain together:
+
+```csharp
+Result Validate(Order order);
+Result<Receipt> Charge(Order order);
+
+Result<Receipt> receipt = FindOrder(id)
+    .Bind(order => Validate(order).Map(() => order))  // keep the order once validation passes
+    .Bind(Charge);
+
+Result saved = Save(order).Bind(() => Notify(order)); // Result Save(Order), Result Notify(Order)
+string status = saved.Match(() => "Saved", failure => failure.Error);
+```
+
+`Result<T>.Bind` also takes a step that returns a `Result`, and `ToResult()` drops a `Result<T>`'s value, keeping only
+whether it succeeded.
 
 ## Null and default values
 

@@ -84,5 +84,106 @@ public static class ResultExtensions
 
             return result.IsSuccess ? bind(result.SuccessValue) : result.Failure;
         }
+
+        /// <summary>
+        /// Chains a step that can fail and has no value of its own. A failure is passed through unchanged without
+        /// calling the step.
+        /// </summary>
+        /// <param name="bind">Called with the success value if the result is a success.</param>
+        /// <returns>The result returned by <paramref name="bind" />, or the original failure.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="bind" /> is <see langword="null" />.</exception>
+        public Result Bind(Func<T, Result> bind)
+        {
+            ArgumentNullException.ThrowIfNull(bind);
+
+            return result.IsSuccess ? bind(result.SuccessValue) : result.Failure;
+        }
+
+        /// <summary>
+        /// Drops the success value, keeping only whether the result succeeded.
+        /// </summary>
+        /// <returns>A success if the result is a success, or the original failure.</returns>
+        public Result ToResult()
+        {
+            if (result.IsSuccess)
+            {
+                return Result.Success;
+            }
+
+            return result.Failure;
+        }
+    }
+
+    extension(Result result)
+    {
+        /// <summary>
+        /// Handles both cases of the result and returns a value from either one.
+        /// </summary>
+        /// <param name="onSuccess">Called if the result is a success.</param>
+        /// <param name="onFailure">
+        /// Called with the failure if the result is a failure. A <see langword="default" /> result passes
+        /// <see cref="Failure.Uninitialized" />.
+        /// </param>
+        /// <typeparam name="TOut">The type returned by both handlers.</typeparam>
+        /// <returns>The value returned by the handler that was called.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// <paramref name="onSuccess" /> or <paramref name="onFailure" /> is <see langword="null" />.
+        /// </exception>
+        public TOut Match<TOut>(Func<TOut> onSuccess, Func<Failure, TOut> onFailure)
+        {
+            ArgumentNullException.ThrowIfNull(onSuccess);
+            ArgumentNullException.ThrowIfNull(onFailure);
+
+            return result.IsSuccess ? onSuccess() : onFailure(result.Failure);
+        }
+
+        /// <summary>
+        /// Produces a success value if the result is a success, and passes a failure through unchanged.
+        /// </summary>
+        /// <param name="map">
+        /// Called if the result is a success. It must not return a <see cref="Failure" /> (<c>CSPP0002</c>), because
+        /// <c>Map</c> would store it as a success value.
+        /// </param>
+        /// <typeparam name="TOut">
+        /// The type of the success value. It must not be <see cref="Failure" /> or derive from it (<c>CSPP0001</c>); to
+        /// fail from inside the step, use <c>Bind</c> instead.
+        /// </typeparam>
+        /// <returns>A success holding the value returned by <paramref name="map" />, or the original failure.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="map" /> is <see langword="null" />.</exception>
+        public Result<TOut> Map<TOut>(Func<TOut> map)
+        {
+            ArgumentNullException.ThrowIfNull(map);
+
+            return result.IsSuccess ? map() : result.Failure;
+        }
+
+        /// <summary>
+        /// Chains a step that can fail and has no value of its own. A failure is passed through unchanged without
+        /// calling the step.
+        /// </summary>
+        /// <param name="bind">Called if the result is a success.</param>
+        /// <returns>The result returned by <paramref name="bind" />, or the original failure.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="bind" /> is <see langword="null" />.</exception>
+        public Result Bind(Func<Result> bind)
+        {
+            ArgumentNullException.ThrowIfNull(bind);
+
+            return result.IsSuccess ? bind() : result;
+        }
+
+        /// <summary>
+        /// Chains a step that can fail and produces a value. A failure is passed through unchanged without calling the
+        /// step.
+        /// </summary>
+        /// <param name="bind">Called if the result is a success.</param>
+        /// <typeparam name="TOut">The success value type of the result returned by <paramref name="bind" />.</typeparam>
+        /// <returns>The result returned by <paramref name="bind" />, or the original failure.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="bind" /> is <see langword="null" />.</exception>
+        public Result<TOut> Bind<TOut>(Func<Result<TOut>> bind)
+        {
+            ArgumentNullException.ThrowIfNull(bind);
+
+            return result.IsSuccess ? bind() : result.Failure;
+        }
     }
 }

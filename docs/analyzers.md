@@ -34,5 +34,5 @@ Result<object> mapped = result.Map<int, object>(_ => Failure.Unknown); // CSPP00
 
 To fail from inside a step, use `Bind` and return the failure as a `Result`.
 
-The check looks at lambdas and method groups passed to `Map` directly, by the static type of what they return. It does
+The check covers `Map` on both `Result<T>` and the non-generic `Result`. It looks at lambdas and method groups passed to `Map` directly, by the static type of what they return. It does
 not see a delegate stored in a variable first, or a `Failure` returned as `object`.

@@ -77,6 +77,9 @@ public class ResultOfFailureAnalyzerTests
     [TestCase("var mapped = Wrap(1).Map(_ => new ValidationFailure(\"Code\", \"Error\"));")]
     [TestCase("Result<int>? source = Wrap(1); var mapped = source?.Map(_ => Failure.Unknown);")]
     [TestCase("var bound = Wrap(1).Bind<int, ValidationFailure>(_ => default);")]
+    [TestCase("Result ok = Result.Success; var mapped = ok.Map(() => Failure.Unknown);")]
+    [TestCase("Result ok = Result.Success; var mapped = ok.Map<Failure>(() => Failure.Unknown);")]
+    [TestCase("Result ok = Result.Success; var bound = ok.Bind<Failure>(() => default);")]
     [TestCase("var bound = Wrap(1).Bind<int, Failure>(_ => default);")]
     public async Task Analyze_GenericCallInferringResultOfFailure_ReportsDiagnostic(string statement)
     {
@@ -278,6 +281,11 @@ public class ResultOfFailureAnalyzerTests
     [TestCase("var code = Wrap(1).Match(_ => string.Empty, failure => failure.Code);")]
     [TestCase("var failure = Wrap(1).Match(_ => (Failure?)null, failure => failure);")]
     [TestCase("var same = Identity(Wrap(1));")]
+    [TestCase("Result ok = Result.Success; var mapped = ok.Map(() => 1);")]
+    [TestCase("Result ok = Result.Success; var bound = ok.Bind(() => Failure.Unknown);")]
+    [TestCase("Result ok = Result.Success; var failure = ok.Match(() => (Failure?)null, failure => failure);")]
+    [TestCase("var bound = Wrap(1).Bind(_ => Failure.Unknown);")]
+    [TestCase("var result = Wrap(Failure.Unknown.Code).ToResult();")]
     [TestCase("var first = System.Linq.Enumerable.First(new[] { Wrap(1) });")]
     public async Task Analyze_GenericCallNotInferringResultOfFailure_ReportsNothing(string statement)
     {
