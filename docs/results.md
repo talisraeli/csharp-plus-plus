@@ -58,7 +58,24 @@ For the non-generic `Result`, return `Result.Success` or a `Failure`.
 
 ## Null and default values
 
-A success value may be `null` when `T` allows it (for example `Result<string?>`).
+A success value may be `null` when `T` allows it (for example `Result<string?>`). It is still a success: `IsSuccess` is
+`true`, and `Match`, `Map`, `Bind` and `GetValueOrDefault` pass the `null` to the success delegate or return it.
+
+In a `switch`, a `null` value matches a `null` arm, not the type arm, as with any other `null`:
+
+```csharp
+string text = result switch
+{
+    null => "no value",
+    string value => value,
+    Failure failure => failure.Error,
+};
+```
+
+Without the `null` arm the compiler warns (CS8655), and a `null` value throws `SwitchExpressionException`. C# doesn't
+allow a nullable type pattern such as `string? value`, so to handle `null` and non-null values in one place, use
+`Match`. For the same reason, `HasValue` and `TryGetValue(out T)` return `false` for a `null` value; check `IsSuccess`
+instead.
 
 A `default` result is a failure carrying `Failure.Uninitialized`, which has its own code and error so it can't be
 confused with `Failure.Unknown`. It is equal to, and has the same hash code as, a result created from

@@ -75,6 +75,36 @@ public class ResultExtensionsTests
     }
 
     [Test]
+    public void Match_OnSuccessWithNullValue_CallsOnSuccessWithNull()
+    {
+        Result<string?> result = (string?)null;
+
+        string message = result.Match(value => value ?? "null", failure => $"failure {failure.Code}");
+
+        Assert.That(message, Is.EqualTo("null"));
+    }
+
+    [Test]
+    public void Map_OnSuccessWithNullValue_CallsMapWithNull()
+    {
+        Result<string?> result = (string?)null;
+
+        Result<bool> mapped = result.Map(value => value is null);
+
+        Assert.That(mapped.TryGetValue(out bool isNull) && isNull, Is.True);
+    }
+
+    [Test]
+    public void Bind_OnSuccessWithNullValue_CallsBindWithNull()
+    {
+        Result<string?> result = (string?)null;
+
+        Result<bool> bound = result.Bind(value => (Result<bool>)(value is null));
+
+        Assert.That(bound.TryGetValue(out bool isNull) && isNull, Is.True);
+    }
+
+    [Test]
     public void Match_OnFailure_CallsOnFailureWithFailure()
     {
         Result<int> result = ParseFailure;

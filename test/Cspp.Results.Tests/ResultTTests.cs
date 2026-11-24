@@ -228,11 +228,64 @@ public class ResultTTests
         using (Assert.EnterMultipleScope())
         {
             Assert.That(result.IsSuccess, Is.True);
-            Assert.That(result.TryGetValue(out string? value), Is.True);
+            Assert.That(result.IsFailure, Is.False);
+            Assert.That(result.HasValue, Is.False);
+            Assert.That(result.Value, Is.Null);
+            Assert.That(result.TryGetValue(out string? value), Is.False);
             Assert.That(value, Is.Null);
             Assert.That(result.TryGetValue(out Failure? failure), Is.False);
             Assert.That(failure, Is.Null);
         }
+    }
+
+    [Test]
+    public void HasValue_OnSuccessWithValue_ReturnsTrue()
+    {
+        Result<string?> result = "value";
+
+        Assert.That(result.HasValue, Is.True);
+    }
+
+    [Test]
+    public void HasValue_OnFailure_ReturnsTrue()
+    {
+        Result<string?> result = Failure.Unknown;
+
+        Assert.That(result.HasValue, Is.True);
+    }
+
+    [Test]
+    public void Switch_OnNullValue_MatchesNullArm()
+    {
+        Assert.That(DescribeNullable((string?)null), Is.EqualTo("null"));
+    }
+
+    [Test]
+    public void Switch_OnNullableSuccessWithValue_MatchesTypeArm()
+    {
+        Assert.That(DescribeNullable("value"), Is.EqualTo("success value"));
+    }
+
+    [Test]
+    public void Switch_OnNullableFailure_MatchesFailureArm()
+    {
+        Assert.That(DescribeNullable(Failure.Unknown), Is.EqualTo(Failure.Unknown.Code));
+    }
+
+    [Test]
+    public void Switch_OnNullValueWithoutNullArm_DoesNotMatchTypeArm()
+    {
+        Result<string?> result = (string?)null;
+
+#pragma warning disable CS8655 // The switch deliberately leaves out the null arm.
+        Assert.That(
+            () => result switch
+            {
+                string value => value,
+                Failure failure => failure.Code
+            },
+            Throws.TypeOf<System.Runtime.CompilerServices.SwitchExpressionException>());
+#pragma warning restore CS8655
     }
 
     [Test]
@@ -249,6 +302,17 @@ public class ResultTTests
         Result<string> result = Failure.Unknown;
 
         Assert.That(result.Value, Is.SameAs(Failure.Unknown));
+    }
+
+    // A switch over a nullable value type with a null arm, shared by the nullable switch tests.
+    private static string DescribeNullable(Result<string?> result)
+    {
+        return result switch
+        {
+            null => "null",
+            string value => $"success {value}",
+            Failure failure => failure.Code
+        };
     }
 
     // One exhaustive switch shared by the switch tests, so each of its arms is reached by one of them.

@@ -27,7 +27,7 @@ public static class ResultExtensions
         /// <returns>The success value, or <paramref name="defaultValue" /> if the result is a failure.</returns>
         public T GetValueOrDefault(T defaultValue)
         {
-            return result.TryGetValue(out T? value) ? value : defaultValue;
+            return result.IsSuccess ? result.SuccessValue : defaultValue;
         }
 
         /// <summary>
@@ -48,7 +48,7 @@ public static class ResultExtensions
             ArgumentNullException.ThrowIfNull(onSuccess);
             ArgumentNullException.ThrowIfNull(onFailure);
 
-            return result.TryGetValue(out T? value) ? onSuccess(value) : onFailure(result.Failure);
+            return result.IsSuccess ? onSuccess(result.SuccessValue) : onFailure(result.Failure);
         }
 
         /// <summary>
@@ -68,7 +68,7 @@ public static class ResultExtensions
         {
             ArgumentNullException.ThrowIfNull(map);
 
-            return result.TryGetValue(out T? value) ? map(value) : result.Failure;
+            return result.IsSuccess ? map(result.SuccessValue) : result.Failure;
         }
 
         /// <summary>
@@ -82,7 +82,7 @@ public static class ResultExtensions
         {
             ArgumentNullException.ThrowIfNull(bind);
 
-            return result.TryGetValue(out T? value) ? bind(value) : result.Failure;
+            return result.IsSuccess ? bind(result.SuccessValue) : result.Failure;
         }
     }
 }
