@@ -560,6 +560,305 @@ public partial class ResultExtensionsTests
         }
     }
 
+    [Test]
+    public void Tap_OnSuccess_CallsOnSuccessAndReturnsSameResult()
+    {
+        Result<int> result = 42;
+        int received = 0;
+
+        Result<int> tapped = result.Tap(value => received = value);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(received, Is.EqualTo(42));
+            Assert.That(tapped, Is.EqualTo(result));
+        }
+    }
+
+    [Test]
+    public void Tap_OnFailure_ReturnsSameResultWithoutCallingOnSuccess()
+    {
+        Result<int> result = ParseFailure;
+        bool called = false;
+
+        Result<int> tapped = result.Tap(_ => called = true);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(called, Is.False);
+            Assert.That(tapped, Is.EqualTo(result));
+        }
+    }
+
+    [Test]
+    public void Tap_WithNullOnSuccess_ThrowsArgumentNullException()
+    {
+        Result<int> result = 42;
+
+        Assert.That(
+            () => result.Tap(null!),
+            Throws.TypeOf<ArgumentNullException>().With.Property("ParamName").EqualTo("onSuccess"));
+    }
+
+    [Test]
+    public void TapFailure_OnFailure_CallsOnFailureAndReturnsSameResult()
+    {
+        Result<int> result = ParseFailure;
+        Failure? received = null;
+
+        Result<int> tapped = result.TapFailure(failure => received = failure);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(received, Is.SameAs(ParseFailure));
+            Assert.That(tapped, Is.EqualTo(result));
+        }
+    }
+
+    [Test]
+    public void TapFailure_OnDefault_CallsOnFailureWithUninitialized()
+    {
+        Result<int> result = default;
+        Failure? received = null;
+
+        result.TapFailure(failure => received = failure);
+
+        Assert.That(received, Is.SameAs(Failure.Uninitialized));
+    }
+
+    [Test]
+    public void TapFailure_OnSuccess_ReturnsSameResultWithoutCallingOnFailure()
+    {
+        Result<int> result = 42;
+        bool called = false;
+
+        Result<int> tapped = result.TapFailure(_ => called = true);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(called, Is.False);
+            Assert.That(tapped, Is.EqualTo(result));
+        }
+    }
+
+    [Test]
+    public void TapFailure_WithNullOnFailure_ThrowsArgumentNullException()
+    {
+        Result<int> result = 42;
+
+        Assert.That(
+            () => result.TapFailure(null!),
+            Throws.TypeOf<ArgumentNullException>().With.Property("ParamName").EqualTo("onFailure"));
+    }
+
+    [Test]
+    public void MapFailure_OnFailure_ReturnsMappedFailure()
+    {
+        Result<int> result = ParseFailure;
+
+        Result<int> mapped = result.MapFailure(_ => NegativeFailure);
+
+        Assert.That(mapped, Is.EqualTo((Result<int>)NegativeFailure));
+    }
+
+    [Test]
+    public void MapFailure_OnDefault_CallsMapWithUninitialized()
+    {
+        Result<int> result = default;
+        Failure? received = null;
+
+        result.MapFailure(failure => received = failure);
+
+        Assert.That(received, Is.SameAs(Failure.Uninitialized));
+    }
+
+    [Test]
+    public void MapFailure_OnSuccess_ReturnsSameResultWithoutCallingMap()
+    {
+        Result<int> result = 42;
+        bool called = false;
+
+        Result<int> mapped = result.MapFailure(failure =>
+        {
+            called = true;
+            return failure;
+        });
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(called, Is.False);
+            Assert.That(mapped, Is.EqualTo(result));
+        }
+    }
+
+    [Test]
+    public void MapFailure_WithNullMap_ThrowsArgumentNullException()
+    {
+        Result<int> result = ParseFailure;
+
+        Assert.That(
+            () => result.MapFailure(null!),
+            Throws.TypeOf<ArgumentNullException>().With.Property("ParamName").EqualTo("map"));
+    }
+
+    [Test]
+    public void MapFailure_WhenMapReturnsNull_ThrowsArgumentNullException()
+    {
+        Result<int> result = ParseFailure;
+
+        Assert.That(
+            () => result.MapFailure(_ => null!),
+            Throws.TypeOf<ArgumentNullException>().With.Property("ParamName").EqualTo("map"));
+    }
+
+    [Test]
+    public void TapNonGeneric_OnSuccess_CallsOnSuccessAndReturnsSameResult()
+    {
+        Result result = Result.Success;
+        bool called = false;
+
+        Result tapped = result.Tap(() => called = true);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(called, Is.True);
+            Assert.That(tapped, Is.EqualTo(result));
+        }
+    }
+
+    [Test]
+    public void TapNonGeneric_OnFailure_ReturnsSameResultWithoutCallingOnSuccess()
+    {
+        Result result = ParseFailure;
+        bool called = false;
+
+        Result tapped = result.Tap(() => called = true);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(called, Is.False);
+            Assert.That(tapped, Is.EqualTo(result));
+        }
+    }
+
+    [Test]
+    public void TapNonGeneric_WithNullOnSuccess_ThrowsArgumentNullException()
+    {
+        Result result = Result.Success;
+
+        Assert.That(
+            () => result.Tap(null!),
+            Throws.TypeOf<ArgumentNullException>().With.Property("ParamName").EqualTo("onSuccess"));
+    }
+
+    [Test]
+    public void TapFailureNonGeneric_OnFailure_CallsOnFailureAndReturnsSameResult()
+    {
+        Result result = ParseFailure;
+        Failure? received = null;
+
+        Result tapped = result.TapFailure(failure => received = failure);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(received, Is.SameAs(ParseFailure));
+            Assert.That(tapped, Is.EqualTo(result));
+        }
+    }
+
+    [Test]
+    public void TapFailureNonGeneric_OnSuccess_ReturnsSameResultWithoutCallingOnFailure()
+    {
+        Result result = Result.Success;
+        bool called = false;
+
+        Result tapped = result.TapFailure(_ => called = true);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(called, Is.False);
+            Assert.That(tapped, Is.EqualTo(result));
+        }
+    }
+
+    [Test]
+    public void TapFailureNonGeneric_WithNullOnFailure_ThrowsArgumentNullException()
+    {
+        Result result = Result.Success;
+
+        Assert.That(
+            () => result.TapFailure(null!),
+            Throws.TypeOf<ArgumentNullException>().With.Property("ParamName").EqualTo("onFailure"));
+    }
+
+    [Test]
+    public void MapFailureNonGeneric_OnFailure_ReturnsMappedFailure()
+    {
+        Result result = ParseFailure;
+
+        Result mapped = result.MapFailure(_ => NegativeFailure);
+
+        Assert.That(mapped, Is.EqualTo((Result)NegativeFailure));
+    }
+
+    [Test]
+    public void MapFailureNonGeneric_OnSuccess_ReturnsSameResultWithoutCallingMap()
+    {
+        Result result = Result.Success;
+        bool called = false;
+
+        Result mapped = result.MapFailure(failure =>
+        {
+            called = true;
+            return failure;
+        });
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(called, Is.False);
+            Assert.That(mapped, Is.EqualTo(result));
+        }
+    }
+
+    [Test]
+    public void MapFailureNonGeneric_WithNullMap_ThrowsArgumentNullException()
+    {
+        Result result = ParseFailure;
+
+        Assert.That(
+            () => result.MapFailure(null!),
+            Throws.TypeOf<ArgumentNullException>().With.Property("ParamName").EqualTo("map"));
+    }
+
+    [Test]
+    public void MapFailureNonGeneric_WhenMapReturnsNull_ThrowsArgumentNullException()
+    {
+        Result result = ParseFailure;
+
+        Assert.That(
+            () => result.MapFailure(_ => null!),
+            Throws.TypeOf<ArgumentNullException>().With.Property("ParamName").EqualTo("map"));
+    }
+
+    [TestCase("21", "", "value 42")]
+    [TestCase("abc", "Parse.Invalid", "failure User.Invalid")]
+    public void TapAndMapFailure_WhenChained_LogAndTranslateFailure(string text, string logged, string expected)
+    {
+        string log = string.Empty;
+
+        string message = Parse(text)
+            .TapFailure(failure => log = failure.Code)
+            .MapFailure(failure => new Failure("User.Invalid", failure.Error))
+            .Map(value => value * 2)
+            .Match(value => $"value {value}", failure => $"failure {failure.Code}");
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(message, Is.EqualTo(expected));
+            Assert.That(log, Is.EqualTo(logged));
+        }
+    }
+
     private static Result<int> Parse(string text)
     {
         return int.TryParse(text, out int value) ? value : ParseFailure;

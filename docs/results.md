@@ -52,6 +52,22 @@ neither calls its delegate. `GetValueOrDefault()` without a default value return
 To fail from inside a step, use `Bind` and return the failure. Returning a `Failure` from `Map` is a compile error; see
 [Analyzers](analyzers.md).
 
+## Side effects and changing a failure
+
+To log or record metrics without breaking the chain, use `Tap` for a success and `TapFailure` for a failure; both return
+the result unchanged. To replace a failure, for example to add context or turn a low-level code into a domain one, use
+`MapFailure`; a success passes through unchanged:
+
+```csharp
+Result<User> user = FindUser(id)
+    .TapFailure(failure => logger.LogWarning("Lookup failed: {Code}", failure.Code))
+    .MapFailure(failure => new Failure("User.NotFound", failure.Error))
+    .Tap(found => metrics.Increment("users.found"));
+```
+
+The non-generic `Result` has the same three members; its `Tap` takes a delegate with no value. `MapFailure` throws
+`ArgumentNullException` if its delegate returns `null`.
+
 ## Asynchronous steps
 
 For a step that runs asynchronously, such as a database or HTTP call, use `MapAsync`, `BindAsync` and `MatchAsync`.

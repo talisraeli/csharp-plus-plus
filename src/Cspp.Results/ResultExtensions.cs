@@ -115,6 +115,64 @@ public static partial class ResultExtensions
 
             return result.Failure;
         }
+
+        /// <summary>
+        /// Runs a side effect, such as logging, with the success value, and returns the result unchanged.
+        /// </summary>
+        /// <param name="onSuccess">Called with the success value if the result is a success.</param>
+        /// <returns>The same result.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="onSuccess" /> is <see langword="null" />.</exception>
+        public Result<T> Tap(Action<T> onSuccess)
+        {
+            ArgumentNullException.ThrowIfNull(onSuccess);
+
+            if (result.IsSuccess)
+            {
+                onSuccess(result.SuccessValue);
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Runs a side effect, such as logging, with the failure, and returns the result unchanged.
+        /// </summary>
+        /// <param name="onFailure">
+        /// Called with the failure if the result is a failure. A <see langword="default" /> result passes
+        /// <see cref="Failure.Uninitialized" />.
+        /// </param>
+        /// <returns>The same result.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="onFailure" /> is <see langword="null" />.</exception>
+        public Result<T> TapFailure(Action<Failure> onFailure)
+        {
+            ArgumentNullException.ThrowIfNull(onFailure);
+
+            if (result.IsFailure)
+            {
+                onFailure(result.Failure);
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Replaces the failure, for example to add context or translate its code, and passes a success through
+        /// unchanged.
+        /// </summary>
+        /// <param name="map">
+        /// Called with the failure if the result is a failure. A <see langword="default" /> result passes
+        /// <see cref="Failure.Uninitialized" />. It must not return <see langword="null" />.
+        /// </param>
+        /// <returns>A failure holding the failure returned by <paramref name="map" />, or the original success.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// <paramref name="map" /> is <see langword="null" />, or it returned <see langword="null" />.
+        /// </exception>
+        public Result<T> MapFailure(Func<Failure, Failure> map)
+        {
+            ArgumentNullException.ThrowIfNull(map);
+
+            return result.IsSuccess ? result : ApplyFailureMap(result.Failure, map);
+        }
     }
 
     extension(Result result)
@@ -188,5 +246,70 @@ public static partial class ResultExtensions
 
             return result.IsSuccess ? bind() : result.Failure;
         }
+
+        /// <summary>
+        /// Runs a side effect, such as logging, if the result is a success, and returns the result unchanged.
+        /// </summary>
+        /// <param name="onSuccess">Called if the result is a success.</param>
+        /// <returns>The same result.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="onSuccess" /> is <see langword="null" />.</exception>
+        public Result Tap(Action onSuccess)
+        {
+            ArgumentNullException.ThrowIfNull(onSuccess);
+
+            if (result.IsSuccess)
+            {
+                onSuccess();
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Runs a side effect, such as logging, with the failure, and returns the result unchanged.
+        /// </summary>
+        /// <param name="onFailure">
+        /// Called with the failure if the result is a failure. A <see langword="default" /> result passes
+        /// <see cref="Failure.Uninitialized" />.
+        /// </param>
+        /// <returns>The same result.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="onFailure" /> is <see langword="null" />.</exception>
+        public Result TapFailure(Action<Failure> onFailure)
+        {
+            ArgumentNullException.ThrowIfNull(onFailure);
+
+            if (result.IsFailure)
+            {
+                onFailure(result.Failure);
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Replaces the failure, for example to add context or translate its code, and passes a success through
+        /// unchanged.
+        /// </summary>
+        /// <param name="map">
+        /// Called with the failure if the result is a failure. A <see langword="default" /> result passes
+        /// <see cref="Failure.Uninitialized" />. It must not return <see langword="null" />.
+        /// </param>
+        /// <returns>A failure holding the failure returned by <paramref name="map" />, or the original success.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// <paramref name="map" /> is <see langword="null" />, or it returned <see langword="null" />.
+        /// </exception>
+        public Result MapFailure(Func<Failure, Failure> map)
+        {
+            ArgumentNullException.ThrowIfNull(map);
+
+            return result.IsSuccess ? result : ApplyFailureMap(result.Failure, map);
+        }
+    }
+
+    // The failure map returns, checked here so a null return names the delegate instead of the Result constructor.
+    private static Failure ApplyFailureMap(Failure failure, Func<Failure, Failure> map)
+    {
+        return map(failure)
+            ?? throw new ArgumentNullException(nameof(map), "The map delegate returned null instead of a Failure.");
     }
 }
