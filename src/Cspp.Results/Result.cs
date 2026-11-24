@@ -70,6 +70,10 @@ public readonly record struct Result : IUnion
 [Union]
 public readonly record struct Result<T> : IUnion
 {
+    // Whether T can hold null. HasValue checks it first so that the null check never runs on a value type T, where the
+    // runtime would box the value to check it until it optimizes the code.
+    private static readonly bool CanBeNull = default(T) is null;
+
     private readonly Result state;
     private readonly T value;
 
@@ -91,8 +95,17 @@ public readonly record struct Result<T> : IUnion
         state = failure;
     }
 
-    public bool HasValue => true;
+    /// <summary>
+    /// Gets a value indicating whether <see cref="Value" /> is not <see langword="null" />. It is
+    /// <see langword="false" /> only for a success whose value is <see langword="null" />, which a <c>null</c> pattern
+    /// matches.
+    /// </summary>
+    public bool HasValue => IsFailure || !CanBeNull || value is not null;
 
+    /// <summary>
+    /// Gets a value indicating whether the result is a success. A success whose value is <see langword="null" /> is
+    /// still a success.
+    /// </summary>
     public bool IsSuccess => state.IsSuccess;
 
     public bool IsFailure => state.IsFailure;
@@ -101,10 +114,22 @@ public readonly record struct Result<T> : IUnion
 
     internal Failure Failure => state.Failure;
 
-    public bool TryGetValue([MaybeNullWhen(false)] out T value)
+    // The success value, which may be null, for members that treat a null value as a success.
+    internal T SuccessValue => value;
+
+    /// <summary>
+    /// Gets the success value if it is not <see langword="null" />. Pattern matching uses this, so a type pattern such as
+    /// <c>string s</c> doesn't match a <see langword="null" /> value, as with any other <see langword="null" />.
+    /// </summary>
+    /// <param name="value">The success value, or <see langword="default" /> if this method returns <see langword="false" />.</param>
+    /// <returns>
+    /// <see langword="true" /> if the result is a success whose value is not <see langword="null" />. Use
+    /// <see cref="IsSuccess" /> to check for a success that may hold <see langword="null" />.
+    /// </returns>
+    public bool TryGetValue([NotNullWhen(true)] out T? value)
     {
         value = IsSuccess ? this.value : default;
-        return IsSuccess;
+        return IsSuccess && HasValue;
     }
 
     public bool TryGetValue([NotNullWhen(true)] out Failure? failure)
