@@ -61,4 +61,5 @@ For the non-generic `Result`, return `Result.Success` or a `Failure`.
 A success value may be `null` when `T` allows it (for example `Result<string?>`).
 
 A `default` result is a failure carrying `Failure.Uninitialized`, which has its own code and error so it can't be
-confused with `Failure.Unknown`.
+confused with `Failure.Unknown`. It is equal to, and has the same hash code as, a result created from
+`Failure.Uninitialized`.

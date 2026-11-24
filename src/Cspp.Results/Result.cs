@@ -47,6 +47,24 @@ public readonly record struct Result : IUnion
         failure = IsFailure ? Failure : null;
         return IsFailure;
     }
+
+    /// <summary>
+    /// Determines whether this result and <paramref name="other" /> hold the same case. Two failures are equal when their
+    /// failures are equal, so a <see langword="default" /> result equals one created from
+    /// <see cref="Failure.Uninitialized" />.
+    /// </summary>
+    /// <param name="other">The result to compare with.</param>
+    /// <returns><see langword="true" /> if both results are successes, or both hold equal failures.</returns>
+    public bool Equals(Result other)
+    {
+        return type == other.type && (IsSuccess || Failure == other.Failure);
+    }
+
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        return IsSuccess ? HashCode.Combine(type) : HashCode.Combine(type, Failure);
+    }
 }
 
 [Union]
@@ -92,5 +110,23 @@ public readonly record struct Result<T> : IUnion
     public bool TryGetValue([NotNullWhen(true)] out Failure? failure)
     {
         return state.TryGetValue(out failure);
+    }
+
+    /// <summary>
+    /// Determines whether this result and <paramref name="other" /> hold the same case. Two successes are equal when
+    /// their values are equal, and two failures when their failures are equal, so a <see langword="default" /> result
+    /// equals one created from <see cref="Failure.Uninitialized" />.
+    /// </summary>
+    /// <param name="other">The result to compare with.</param>
+    /// <returns><see langword="true" /> if both results hold equal values or equal failures.</returns>
+    public bool Equals(Result<T> other)
+    {
+        return state == other.state && (IsFailure || EqualityComparer<T>.Default.Equals(value, other.value));
+    }
+
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        return IsSuccess ? HashCode.Combine(state, value) : state.GetHashCode();
     }
 }
