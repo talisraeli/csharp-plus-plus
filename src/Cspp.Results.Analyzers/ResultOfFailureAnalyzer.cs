@@ -10,9 +10,10 @@ namespace Cspp.Results.Analyzers;
 
 /// <summary>
 /// Reports <c>Result&lt;T&gt;</c> where <c>T</c> is or derives from <c>Failure</c>. Such a type cannot tell its success
-/// value apart from its failure, because both cases convert from a <c>Failure</c>. Covers types written in source and
-/// method calls whose type arguments make them return such a type, or a <c>Task</c> or <c>ValueTask</c> of one, for
-/// example <c>result.Map(_ =&gt; Failure.Unknown)</c> or <c>result.MapAsync(_ =&gt; GetFailureAsync())</c>.
+/// value apart from its failure, because both cases convert from a <c>Failure</c>. Covers types written in source, and
+/// method calls, property reads and method groups whose type arguments make them return such a type, or a <c>Task</c>
+/// or <c>ValueTask</c> of one, for example <c>result.Map(_ =&gt; Failure.Unknown)</c> or
+/// <c>result.MapAsync(_ =&gt; GetFailureAsync())</c>.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class ResultOfFailureAnalyzer : DiagnosticAnalyzer
@@ -48,6 +49,12 @@ public sealed class ResultOfFailureAnalyzer : DiagnosticAnalyzer
 
             start.RegisterSyntaxNodeAction(node => AnalyzeGenericName(node, types), SyntaxKind.GenericName);
             start.RegisterOperationAction(operation => AnalyzeInvocation(operation, types), OperationKind.Invocation);
+            start.RegisterOperationAction(
+                operation => AnalyzePropertyReference(operation, types),
+                OperationKind.PropertyReference);
+            start.RegisterOperationAction(
+                operation => AnalyzeMethodReference(operation, types),
+                OperationKind.MethodReference);
         });
     }
 
@@ -73,32 +80,93 @@ public sealed class ResultOfFailureAnalyzer : DiagnosticAnalyzer
     {
         IInvocationOperation invocation = (IInvocationOperation)context.Operation;
         IMethodSymbol method = invocation.TargetMethod;
-        ITypeSymbol declaredReturnType = method.OriginalDefinition.ReturnType;
 
-        // Only a return type that comes from a type argument (of the method, of its containing type, or of an extension
-        // block), which is when substituting the type arguments changed it. A return type that substitution leaves alone
-        // is written in source and reported there. A task of a result counts, because awaiting it gives the result.
-        if (!types.IsAwaitedResultOfFailure(method.ReturnType)
-            || SymbolEqualityComparer.Default.Equals(method.ReturnType, declaredReturnType))
+        AnalyzeMember(
+            context,
+            types,
+            method,
+            method.ReturnType,
+            method.OriginalDefinition.ReturnType,
+            invocation.Instance,
+            method.Parameters,
+            GetMemberName(invocation.Syntax));
+    }
+
+    private static void AnalyzePropertyReference(OperationAnalysisContext context, ResultsTypes types)
+    {
+        IPropertyReferenceOperation reference = (IPropertyReferenceOperation)context.Operation;
+        IPropertySymbol property = reference.Property;
+
+        AnalyzeMember(
+            context,
+            types,
+            property,
+            property.Type,
+            property.OriginalDefinition.Type,
+            reference.Instance,
+            property.Parameters,
+            GetMemberName(reference.Syntax));
+    }
+
+    // A method group, such as Wrap<Failure> turned into a delegate. Only type arguments written out are reported: inferred
+    // ones come from the delegate type the group converts to, which already carries the Result<Failure> and is reported
+    // where it is written or created. Calling the delegate is skipped too, because its type carries the Result<Failure>.
+    private static void AnalyzeMethodReference(OperationAnalysisContext context, ResultsTypes types)
+    {
+        IMethodReferenceOperation reference = (IMethodReferenceOperation)context.Operation;
+        SyntaxNode name = GetMemberName(reference.Syntax);
+        if (name is not GenericNameSyntax)
         {
             return;
         }
 
-        // A declaration in source that returns Result<TFailure> constrained to Failure is reported where it is written.
-        // A declaration from metadata is never analyzed, so its calls are reported instead.
-        if (types.IsAwaitedResultOfFailure(declaredReturnType)
-            && method.OriginalDefinition.Locations.Any(location => location.IsInSource))
+        IMethodSymbol method = reference.Method;
+        AnalyzeMember(
+            context,
+            types,
+            method,
+            method.ReturnType,
+            method.OriginalDefinition.ReturnType,
+            reference.Instance,
+            method.Parameters,
+            name);
+    }
+
+    // Reports a member whose type, the return type of a method or the type of a property, becomes a Result<Failure> (or
+    // a task of one) through its type arguments.
+    private static void AnalyzeMember(
+        OperationAnalysisContext context,
+        ResultsTypes types,
+        ISymbol member,
+        ITypeSymbol type,
+        ITypeSymbol declaredType,
+        IOperation? instance,
+        ImmutableArray<IParameterSymbol> parameters,
+        SyntaxNode name)
+    {
+        // Only a type that comes from a type argument (of a method, of its containing type, or of an extension block),
+        // which is when substituting the type arguments changed it. A type that substitution leaves alone is written in
+        // source and reported there. A task of a result counts, because awaiting it gives the result.
+        if (!types.IsAwaitedResultOfFailure(type) || SymbolEqualityComparer.Default.Equals(type, declaredType))
+        {
+            return;
+        }
+
+        // A declaration in hand-written source that returns Result<TFailure> constrained to Failure is reported where it
+        // is written. Generated code and metadata are never analyzed, so uses of their declarations are reported instead.
+        if (types.IsAwaitedResultOfFailure(declaredType)
+            && member.OriginalDefinition.Locations.Any(location => location.SourceTree is { } tree
+                && !GeneratedCode.IsGenerated(tree, context.Options, context.CancellationToken)))
         {
             return;
         }
 
         // With inferred type arguments, a Result<Failure> that flows in through the receiver or an argument was
-        // reported where it was created, so the calls chained on it don't report the same mistake again. Type
+        // reported where it was created, so the uses chained on it don't report the same mistake again. Type
         // arguments written out are the mistake itself, so they are always reported.
-        SyntaxNode name = GetMethodName(invocation.Syntax);
         if (name is not GenericNameSyntax
-            && ((invocation.Instance?.Type is { } instanceType && ContainsResultOfFailure(instanceType, types))
-                || method.Parameters.Any(parameter => ContainsResultOfFailure(parameter.Type, types))))
+            && ((instance?.Type is { } instanceType && ContainsResultOfFailure(instanceType, types))
+                || parameters.Any(parameter => ContainsResultOfFailure(parameter.Type, types))))
         {
             return;
         }
@@ -107,7 +175,7 @@ public sealed class ResultOfFailureAnalyzer : DiagnosticAnalyzer
         // is reported where it is written.
         if (name is GenericNameSyntax { TypeArgumentList.Arguments: var typeArguments }
             && typeArguments.Any(argument => ContainsResultOfFailure(
-                invocation.SemanticModel!.GetTypeInfo(argument, context.CancellationToken).Type,
+                context.Operation.SemanticModel!.GetTypeInfo(argument, context.CancellationToken).Type,
                 types)))
         {
             return;
@@ -116,7 +184,7 @@ public sealed class ResultOfFailureAnalyzer : DiagnosticAnalyzer
         context.ReportDiagnostic(Diagnostic.Create(
             Rule,
             name is SimpleNameSyntax simpleName ? simpleName.Identifier.GetLocation() : name.GetLocation(),
-            types.GetAwaitedResultValueType(method.ReturnType)!.ToDisplayString()));
+            types.GetAwaitedResultValueType(type)!.ToDisplayString()));
     }
 
     private static bool ContainsResultOfFailure(ITypeSymbol? type, ResultsTypes types)
@@ -130,17 +198,16 @@ public sealed class ResultOfFailureAnalyzer : DiagnosticAnalyzer
         };
     }
 
-    // The node naming the called method, where the diagnostic goes. Calls without invocation syntax, such as LINQ query
-    // clauses, use their whole syntax.
-    private static SyntaxNode GetMethodName(SyntaxNode syntax)
+    // The node naming the member, where the diagnostic goes. Uses without a name of their own, such as LINQ query clauses,
+    // use their whole syntax.
+    private static SyntaxNode GetMemberName(SyntaxNode syntax)
     {
-        return syntax is InvocationExpressionSyntax invocation
-            ? invocation.Expression switch
-            {
-                MemberAccessExpressionSyntax memberAccess => memberAccess.Name,
-                MemberBindingExpressionSyntax memberBinding => memberBinding.Name,
-                _ => invocation.Expression
-            }
-            : syntax;
+        return syntax switch
+        {
+            InvocationExpressionSyntax invocation => GetMemberName(invocation.Expression),
+            MemberAccessExpressionSyntax memberAccess => memberAccess.Name,
+            MemberBindingExpressionSyntax memberBinding => memberBinding.Name,
+            _ => syntax
+        };
     }
 }

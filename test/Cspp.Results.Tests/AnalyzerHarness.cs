@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -13,6 +14,8 @@ namespace Cspp.Results.Tests;
 internal static class AnalyzerHarness
 {
     private const string ResultsAssemblyFileName = "Cspp.Results.dll";
+
+    private static readonly CSharpParseOptions ParseOptions = new(LanguageVersion.Preview);
 
     public static IEnumerable<string> Ids(ImmutableArray<Diagnostic> diagnostics)
     {
@@ -78,6 +81,32 @@ internal static class AnalyzerHarness
             .GetAnalyzerDiagnosticsAsync();
     }
 
+    // Runs the analyzer on several files, each parsed with its own path. generatedCode maps a path to the value of its
+    // .editorconfig generated_code setting, for files that have one.
+    public static async Task<ImmutableArray<Diagnostic>> AnalyzeFilesAsync(
+        DiagnosticAnalyzer analyzer,
+        IEnumerable<(string Path, string Source)> files,
+        IReadOnlyDictionary<string, string>? generatedCode = null)
+    {
+        CSharpCompilation compilation = CreateCompilation(
+            "AnalyzerTest",
+            files.Select(file => CSharpSyntaxTree.ParseText(file.Source, ParseOptions, file.Path)),
+            referenceResultsLibrary: true);
+
+        Assert.That(
+            compilation.GetDiagnostics().Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error),
+            Is.Empty,
+            "The test source must compile.");
+
+        AnalyzerOptions options = new(
+            [],
+            new GeneratedCodeOptionsProvider(generatedCode ?? new Dictionary<string, string>()));
+
+        return await compilation
+            .WithAnalyzers([analyzer], options)
+            .GetAnalyzerDiagnosticsAsync();
+    }
+
     // Emits the source to an in-memory assembly, so its declarations reach an analyzed compilation as metadata.
     public static MetadataReference CompileLibrary(string source)
     {
@@ -91,6 +120,14 @@ internal static class AnalyzerHarness
 
     private static CSharpCompilation CreateCompilation(string assemblyName, string source, bool referenceResultsLibrary)
     {
+        return CreateCompilation(assemblyName, [CSharpSyntaxTree.ParseText(source, ParseOptions)], referenceResultsLibrary);
+    }
+
+    private static CSharpCompilation CreateCompilation(
+        string assemblyName,
+        IEnumerable<SyntaxTree> trees,
+        bool referenceResultsLibrary)
+    {
         IEnumerable<string> platformAssemblies =
             ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator);
         IEnumerable<string> referencePaths = referenceResultsLibrary
@@ -99,10 +136,36 @@ internal static class AnalyzerHarness
 
         return CSharpCompilation.Create(
             assemblyName,
-            [CSharpSyntaxTree.ParseText(source, new CSharpParseOptions(LanguageVersion.Preview))],
+            trees,
             referencePaths
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .Select(path => MetadataReference.CreateFromFile(path)),
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable));
+    }
+
+    // Answers the .editorconfig generated_code setting for the files that have one.
+    private sealed class GeneratedCodeOptionsProvider(IReadOnlyDictionary<string, string> generatedCode)
+        : AnalyzerConfigOptionsProvider
+    {
+        public override AnalyzerConfigOptions GlobalOptions => new GeneratedCodeOptions(null);
+
+        public override AnalyzerConfigOptions GetOptions(SyntaxTree tree)
+        {
+            return new GeneratedCodeOptions(generatedCode.TryGetValue(tree.FilePath, out string? value) ? value : null);
+        }
+
+        public override AnalyzerConfigOptions GetOptions(AdditionalText textFile)
+        {
+            return new GeneratedCodeOptions(null);
+        }
+    }
+
+    private sealed class GeneratedCodeOptions(string? generatedCode) : AnalyzerConfigOptions
+    {
+        public override bool TryGetValue(string key, [NotNullWhen(true)] out string? value)
+        {
+            value = key == "generated_code" ? generatedCode : null;
+            return value is not null;
+        }
     }
 }
