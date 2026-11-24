@@ -1,6 +1,9 @@
 namespace Cspp.Results;
 
-public static class ResultExtensions
+/// <summary>
+/// Members for consuming a <see cref="Result" /> or a <see cref="Result{T}" />: matching, transforming and chaining.
+/// </summary>
+public static partial class ResultExtensions
 {
     extension(Result)
     {

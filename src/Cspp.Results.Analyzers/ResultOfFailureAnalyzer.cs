@@ -11,8 +11,8 @@ namespace Cspp.Results.Analyzers;
 /// <summary>
 /// Reports <c>Result&lt;T&gt;</c> where <c>T</c> is or derives from <c>Failure</c>. Such a type cannot tell its success
 /// value apart from its failure, because both cases convert from a <c>Failure</c>. Covers types written in source and
-/// method calls whose type arguments make them return such a type, for example
-/// <c>result.Map(_ =&gt; Failure.Unknown)</c>.
+/// method calls whose type arguments make them return such a type, or a <c>Task</c> or <c>ValueTask</c> of one, for
+/// example <c>result.Map(_ =&gt; Failure.Unknown)</c> or <c>result.MapAsync(_ =&gt; GetFailureAsync())</c>.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class ResultOfFailureAnalyzer : DiagnosticAnalyzer
@@ -72,8 +72,8 @@ public sealed class ResultOfFailureAnalyzer : DiagnosticAnalyzer
 
         // Only a return type that comes from a type argument (of the method, of its containing type, or of an extension
         // block), which is when substituting the type arguments changed it. A return type that substitution leaves alone
-        // is written in source and reported there.
-        if (!types.IsResultOfFailure(method.ReturnType)
+        // is written in source and reported there. A task of a result counts, because awaiting it gives the result.
+        if (!types.IsAwaitedResultOfFailure(method.ReturnType)
             || SymbolEqualityComparer.Default.Equals(method.ReturnType, declaredReturnType))
         {
             return;
@@ -81,7 +81,7 @@ public sealed class ResultOfFailureAnalyzer : DiagnosticAnalyzer
 
         // A declaration in source that returns Result<TFailure> constrained to Failure is reported where it is written.
         // A declaration from metadata is never analyzed, so its calls are reported instead.
-        if (types.IsResultOfFailure(declaredReturnType)
+        if (types.IsAwaitedResultOfFailure(declaredReturnType)
             && method.OriginalDefinition.Locations.Any(location => location.IsInSource))
         {
             return;
@@ -98,13 +98,23 @@ public sealed class ResultOfFailureAnalyzer : DiagnosticAnalyzer
             return;
         }
 
+        // A type argument written out that itself contains a Result<Failure>, such as Task.FromResult<Result<Failure>>,
+        // is reported where it is written.
+        if (name is GenericNameSyntax { TypeArgumentList.Arguments: var typeArguments }
+            && typeArguments.Any(argument => ContainsResultOfFailure(
+                invocation.SemanticModel!.GetTypeInfo(argument, context.CancellationToken).Type,
+                types)))
+        {
+            return;
+        }
+
         context.ReportDiagnostic(Diagnostic.Create(
             Rule,
             name is SimpleNameSyntax simpleName ? simpleName.Identifier.GetLocation() : name.GetLocation(),
-            types.GetResultValueType(method.ReturnType)!.ToDisplayString()));
+            types.GetAwaitedResultValueType(method.ReturnType)!.ToDisplayString()));
     }
 
-    private static bool ContainsResultOfFailure(ITypeSymbol type, ResultsTypes types)
+    private static bool ContainsResultOfFailure(ITypeSymbol? type, ResultsTypes types)
     {
         return type switch
         {

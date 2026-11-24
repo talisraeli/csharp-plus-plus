@@ -4,7 +4,7 @@ namespace Cspp.Results.Tests;
 
 [TestFixture]
 [TestSubject(typeof(ResultExtensions))]
-public class ResultExtensionsTests
+public partial class ResultExtensionsTests
 {
     private static readonly Failure ParseFailure = new("Parse.Invalid", "Not a number.");
 

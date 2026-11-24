@@ -52,6 +52,21 @@ neither calls its delegate. `GetValueOrDefault()` without a default value return
 To fail from inside a step, use `Bind` and return the failure. Returning a `Failure` from `Map` is a compile error; see
 [Analyzers](analyzers.md).
 
+## Asynchronous steps
+
+For a step that runs asynchronously, such as a database or HTTP call, use `MapAsync`, `BindAsync` and `MatchAsync`.
+`Map`, `Bind` and `Match` (and the `Async` versions) also work directly on a `Task<Result<T>>`, so an async chain needs
+only one `await`:
+
+```csharp
+Result<Receipt> receipt = await FindOrderAsync(id)          // Task<Result<Order>>
+    .Bind(Validate)                                         // Result<Order> Validate(Order order)
+    .BindAsync(order => ChargeAsync(order, cancellationToken)); // Task<Result<Receipt>> ChargeAsync(...)
+```
+
+The delegates don't take a `CancellationToken`; to cancel a step, pass the token in from the enclosing method, as
+above. A `null` delegate or task throws `ArgumentNullException` when the member is called, not when its task is awaited.
+
 ## The non-generic `Result`
 
 For the non-generic `Result`, return `Result.Success` or a `Failure`. It has `Match`, `Map` and `Bind` too, with

@@ -9,6 +9,7 @@ writes the same scenarios in its own idiomatic style, in `Libraries/`, and every
 | `CreateBenchmarks`   | Creating a success or a failure, including the failure's error object.                   |
 | `MatchBenchmarks`    | Reading an existing success or failure into a value.                                     |
 | `PipelineBenchmarks` | Parse, `Bind` a validation step, `Map` and read the outcome, ending in success, a parse failure or a validation failure. Also runs the same steps with exceptions as a reference point. |
+| `AsyncPipelineBenchmarks` | The Cspp.Results pipeline with an asynchronous parse step, chained on the `Task<Result<T>>`, against the synchronous pipeline. Cspp.Results only. |
 
 `Cspp` is the baseline, so the `Ratio` column shows each library relative to it. `MatchBenchmarks` and
 `PipelineBenchmarks` fail the run if the libraries don't all return the same value.

@@ -25,11 +25,12 @@ internal static class AnalyzerHarness
     }
 
     // Runs the analyzer on a statement placed in a method body, next to a ValidationFailure record and the helpers
-    // Identity, Wrap and GetFailure.
+    // Identity, Wrap, WrapAsync, First and GetFailure.
     public static Task<ImmutableArray<Diagnostic>> AnalyzeStatementAsync(DiagnosticAnalyzer analyzer, string statement)
     {
         return AnalyzeSourceAsync(analyzer, $$"""
             using System.Collections.Generic;
+            using System.Threading.Tasks;
             using Cspp.Results;
 
             public sealed record ValidationFailure(string Code, string Error) : Failure(Code, Error);
@@ -44,6 +45,8 @@ internal static class AnalyzerHarness
                 private static T Identity<T>(T value) => value;
 
                 private static Result<T> Wrap<T>(T value) => value;
+
+                private static Task<Result<T>> WrapAsync<T>(T value) => Task.FromResult(Wrap(value));
 
                 private static Result<T> First<T>(Result<T>[] results) => results[0];
 

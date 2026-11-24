@@ -7,8 +7,8 @@ using Microsoft.CodeAnalysis.Operations;
 namespace Cspp.Results.Analyzers;
 
 /// <summary>
-/// Reports a <c>Map</c> delegate that returns a <c>Failure</c> while the mapped value type is broader, such as
-/// <c>object</c>. <c>Map</c> stores whatever the delegate returns as the success value, so the result would be a success
+/// Reports a <c>Map</c> or <c>MapAsync</c> delegate that returns a <c>Failure</c> while the mapped value type is broader,
+/// such as <c>object</c>. <c>Map</c> stores whatever the delegate returns as the success value, so the result would be a success
 /// holding a failure. When the mapped value type is itself a <c>Failure</c>, <c>CSPP0001</c> reports the call instead.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
@@ -17,6 +17,7 @@ public sealed class MapReturnsFailureAnalyzer : DiagnosticAnalyzer
     public const string DiagnosticId = "CSPP0002";
 
     private const string MapMethodName = "Map";
+    private const string MapAsyncMethodName = "MapAsync";
 
     private static readonly DiagnosticDescriptor Rule = new(
         DiagnosticId,
@@ -55,9 +56,9 @@ public sealed class MapReturnsFailureAnalyzer : DiagnosticAnalyzer
         IMethodSymbol method = invocation.TargetMethod;
 
         // A mapped value type that is itself a Failure is reported by CSPP0001.
-        if (method.Name != MapMethodName
+        if (method.Name is not (MapMethodName or MapAsyncMethodName)
             || !IsDeclaredIn(method, extensions)
-            || types.GetResultValueType(method.ReturnType) is not { } valueType
+            || types.GetAwaitedResultValueType(method.ReturnType) is not { } valueType
             || types.IsFailure(valueType))
         {
             return;
