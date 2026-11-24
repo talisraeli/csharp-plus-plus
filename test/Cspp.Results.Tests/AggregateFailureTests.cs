@@ -112,4 +112,15 @@ public class AggregateFailureTests
 
         Assert.That(aggregate, Is.Not.EqualTo(plain));
     }
+
+    [Test]
+    public void ToString_WhenCalled_ListsEveryFailure()
+    {
+        AggregateFailure aggregate = new([First, Second]);
+
+        Assert.That(
+            aggregate.ToString(),
+            Is.EqualTo(
+                "Failure.Multiple: 2 failures occurred. [Name.Empty: The name is empty., Email.Invalid: The email is invalid.]"));
+    }
 }

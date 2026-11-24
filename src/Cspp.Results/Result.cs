@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
@@ -17,6 +18,7 @@ namespace Cspp.Results;
 /// </para>
 /// </remarks>
 [Union]
+[DebuggerDisplay("{ToString(),nq}")]
 public readonly record struct Result : IUnion
 {
     private readonly Failure? failure;
@@ -112,6 +114,22 @@ public readonly record struct Result : IUnion
     {
         return IsSuccess ? HashCode.Combine(type) : HashCode.Combine(type, Failure);
     }
+
+    /// <summary>
+    /// Describes the result: <c>Success</c>, or <c>Failure(</c><i>failure</i><c>)</c> with the failure's own
+    /// description, such as <c>Failure(Parse.Invalid: 'x' is not a number.)</c>.
+    /// </summary>
+    /// <returns>A short description of the case the result holds.</returns>
+    public override string ToString()
+    {
+        return IsSuccess ? nameof(Success) : Describe(Failure);
+    }
+
+    // The description of a failure case, shared with Result<T>.
+    internal static string Describe(Failure failure)
+    {
+        return $"{nameof(Results.Failure)}({failure})";
+    }
 }
 
 /// <summary>
@@ -134,6 +152,7 @@ public readonly record struct Result : IUnion
 /// value and a failure would then look the same; the <c>CSPP0001</c> analyzer reports this as an error.
 /// </typeparam>
 [Union]
+[DebuggerDisplay("{ToString(),nq}")]
 public readonly record struct Result<T> : IUnion
 {
     // Whether T can hold null. HasValue checks it first so that the null check never runs on a value type T, where the
@@ -240,5 +259,15 @@ public readonly record struct Result<T> : IUnion
     public override int GetHashCode()
     {
         return IsSuccess ? HashCode.Combine(state, value) : state.GetHashCode();
+    }
+
+    /// <summary>
+    /// Describes the result: <c>Success(</c><i>value</i><c>)</c>, with <c>null</c> for a <see langword="null" /> value,
+    /// or <c>Failure(</c><i>failure</i><c>)</c> with the failure's own description.
+    /// </summary>
+    /// <returns>A short description of the case the result holds.</returns>
+    public override string ToString()
+    {
+        return IsSuccess ? $"{nameof(Success)}({(value is null ? "null" : value.ToString())})" : Result.Describe(Failure);
     }
 }

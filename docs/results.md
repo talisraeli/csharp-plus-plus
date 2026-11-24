@@ -33,6 +33,10 @@ wrapping or casting is needed. Because the union's cases are known, the switch i
 arm. If you only need to check which case you have, `result.IsSuccess` and `result.IsFailure` are also available, and
 `TryGetValue` gives you the case without pattern matching.
 
+In logs, test failures and the debugger, a result shows as `Success(42)`, `Success(null)`, `Success` for the
+non-generic `Result`, or `Failure(Parse.Invalid: 'x' is not a number.)`. A `Failure` on its own shows as
+`Parse.Invalid: 'x' is not a number.`, and an `AggregateFailure` lists every failure it holds.
+
 ## Chaining steps
 
 To transform a result or chain steps that can fail without a `switch` at each step, use `Map`, `Bind`, `Match` and

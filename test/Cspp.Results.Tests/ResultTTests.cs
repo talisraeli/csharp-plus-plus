@@ -179,6 +179,70 @@ public class ResultTTests
     }
 
     [Test]
+    public void ToString_OnSuccess_ReturnsSuccessWithValue()
+    {
+        Result<int> result = 5;
+
+        Assert.That(result.ToString(), Is.EqualTo("Success(5)"));
+    }
+
+    [Test]
+    public void ToString_OnSuccessWithString_ReturnsUnquotedValue()
+    {
+        Result<string> result = "abc";
+
+        Assert.That(result.ToString(), Is.EqualTo("Success(abc)"));
+    }
+
+    [Test]
+    public void ToString_OnSuccessWithNullValue_ReturnsSuccessWithNull()
+    {
+        Result<string?> result = (string?)null;
+
+        Assert.That(result.ToString(), Is.EqualTo("Success(null)"));
+    }
+
+    [Test]
+    public void ToString_OnFailure_ReturnsCodeAndError()
+    {
+        Result<int> result = new Failure("Parse.Invalid", "'x' is not a number.");
+
+        Assert.That(result.ToString(), Is.EqualTo("Failure(Parse.Invalid: 'x' is not a number.)"));
+    }
+
+    [Test]
+    public void ToString_OnDefault_ReturnsUninitializedFailure()
+    {
+        Result<int> result = default;
+
+        Assert.That(
+            result.ToString(),
+            Is.EqualTo($"Failure({Failure.Uninitialized.Code}: {Failure.Uninitialized.Error})"));
+    }
+
+    [Test]
+    public void DebuggerDisplay_WhenRead_ShowsToString()
+    {
+        System.Diagnostics.DebuggerDisplayAttribute? attribute = typeof(Result<int>)
+            .GetCustomAttributes(typeof(System.Diagnostics.DebuggerDisplayAttribute), false)
+            .Cast<System.Diagnostics.DebuggerDisplayAttribute>()
+            .SingleOrDefault();
+
+        Assert.That(attribute?.Value, Is.EqualTo("{ToString(),nq}"));
+    }
+
+    [Test]
+    public void ToString_OnAggregateFailure_ListsEveryFailure()
+    {
+        Result<int> result = new AggregateFailure([Failure.Unknown, Failure.Exception]);
+
+        Assert.That(
+            result.ToString(),
+            Is.EqualTo(
+                $"Failure(Failure.Multiple: 2 failures occurred. [{Failure.Unknown}, {Failure.Exception}])"));
+    }
+
+    [Test]
     public void PatternMatch_OnSuccess_DoesNotAllocate()
     {
         static long Run(int iterations)

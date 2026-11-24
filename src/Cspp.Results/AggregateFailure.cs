@@ -61,6 +61,16 @@ public sealed record AggregateFailure : Failure
         return hash.ToHashCode();
     }
 
+    /// <summary>
+    /// Describes the aggregate and every failure it holds, for example
+    /// <c>Failure.Multiple: 2 failures occurred. [Name.Empty: The name is empty., Email.Invalid: The email is invalid.]</c>.
+    /// </summary>
+    /// <returns>The code, the error, and each failure's description in order.</returns>
+    public override string ToString()
+    {
+        return $"{Code}: {Error} [{Join(", ", Failures)}]";
+    }
+
     private static ReadOnlyCollection<Failure> Validate(IEnumerable<Failure> failures)
     {
         ArgumentNullException.ThrowIfNull(failures);

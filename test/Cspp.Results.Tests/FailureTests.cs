@@ -95,4 +95,24 @@ public class FailureTests
             Assert.That(typeof(Failure).GetProperty(nameof(Failure.Error))!.SetMethod, Is.Null);
         }
     }
+
+    [Test]
+    public void ToString_WhenCalled_ReturnsCodeAndError()
+    {
+        Failure failure = new("Parse.Invalid", "'x' is not a number.");
+
+        Assert.That(failure.ToString(), Is.EqualTo("Parse.Invalid: 'x' is not a number."));
+    }
+
+    [Test]
+    public void ToString_OnDerivedRecord_ListsItsMembers()
+    {
+        NotFoundFailure failure = new(42);
+
+        Assert.That(
+            failure.ToString(),
+            Is.EqualTo("NotFoundFailure { Code = Item.NotFound, Error = Item 42 was not found., Id = 42 }"));
+    }
+
+    private sealed record NotFoundFailure(int Id) : Failure("Item.NotFound", $"Item {Id} was not found.");
 }

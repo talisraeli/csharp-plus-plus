@@ -179,6 +179,43 @@ public class ResultTests
     }
 
     [Test]
+    public void ToString_OnSuccess_ReturnsSuccess()
+    {
+        Result result = Result.Success;
+
+        Assert.That(result.ToString(), Is.EqualTo("Success"));
+    }
+
+    [Test]
+    public void ToString_OnFailure_ReturnsCodeAndError()
+    {
+        Result result = new Failure("Parse.Invalid", "'x' is not a number.");
+
+        Assert.That(result.ToString(), Is.EqualTo("Failure(Parse.Invalid: 'x' is not a number.)"));
+    }
+
+    [Test]
+    public void ToString_OnDefault_ReturnsUninitializedFailure()
+    {
+        Result result = default;
+
+        Assert.That(
+            result.ToString(),
+            Is.EqualTo($"Failure({Failure.Uninitialized.Code}: {Failure.Uninitialized.Error})"));
+    }
+
+    [Test]
+    public void DebuggerDisplay_WhenRead_ShowsToString()
+    {
+        System.Diagnostics.DebuggerDisplayAttribute? attribute = typeof(Result)
+            .GetCustomAttributes(typeof(System.Diagnostics.DebuggerDisplayAttribute), false)
+            .Cast<System.Diagnostics.DebuggerDisplayAttribute>()
+            .SingleOrDefault();
+
+        Assert.That(attribute?.Value, Is.EqualTo("{ToString(),nq}"));
+    }
+
+    [Test]
     public void PatternMatch_OnSuccess_DoesNotAllocate()
     {
         static int Run(int iterations)
