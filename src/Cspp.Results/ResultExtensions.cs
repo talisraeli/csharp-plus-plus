@@ -7,6 +7,9 @@ public static partial class ResultExtensions
 {
     extension(Result)
     {
+        /// <summary>
+        /// Gets the success marker. Return it where a <see cref="Result" /> is expected to report success.
+        /// </summary>
         public static Success Success => Success.Instance;
     }
 

@@ -15,8 +15,9 @@ dotnet test CSharpPlusPlus.slnx
 Tests use NUnit with the constraint model (`Assert.That`). There is one fixture per class under test, and test names
 follow `Member_Scenario_ExpectedResult`.
 
-The build treats warnings as errors and runs StyleCop analyzers. Package versions are managed centrally in
-`Directory.Packages.props`.
+The build treats warnings as errors and runs StyleCop analyzers. Every public type and member in `src` needs an XML doc
+comment (CS1591), because the package ships them for IntelliSense; tests and benchmarks are exempt. Package versions are
+managed centrally in `Directory.Packages.props`.
 
 ## Pre-commit hook
 

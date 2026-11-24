@@ -3,12 +3,30 @@ using System.Runtime.CompilerServices;
 
 namespace Cspp.Results;
 
+/// <summary>
+/// The outcome of an operation that has no value to return: a success, or a <see cref="Results.Failure" />.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Return <c>Result.Success</c> or a <see cref="Results.Failure" />; both convert to a <see cref="Result" />
+/// implicitly. A <c>switch</c> over the cases <see cref="Success" /> and
+/// <see cref="Results.Failure" /> is exhaustive without a discard arm.
+/// </para>
+/// <para>
+/// A <see langword="default" /> result is a failure carrying <see cref="Failure.Uninitialized" />.
+/// </para>
+/// </remarks>
 [Union]
 public readonly record struct Result : IUnion
 {
     private readonly Failure? failure;
     private readonly ResultType type;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Result" /> struct as a success. The implicit conversion from
+    /// <c>Result.Success</c> calls this constructor.
+    /// </summary>
+    /// <param name="success">The success marker, <c>Result.Success</c>.</param>
     public Result(Success success)
     {
         type = ResultType.Success;
@@ -26,22 +44,51 @@ public readonly record struct Result : IUnion
         type = ResultType.Failure;
     }
 
+    /// <summary>
+    /// Gets a value indicating whether <see cref="Value" /> is not <see langword="null" />. Always
+    /// <see langword="true" />. It is part of the <see cref="IUnion" /> pattern that <c>switch</c> and <c>is</c> use.
+    /// </summary>
     public bool HasValue => true;
 
+    /// <summary>
+    /// Gets a value indicating whether the result is a success.
+    /// </summary>
     public bool IsSuccess => type == ResultType.Success;
 
+    /// <summary>
+    /// Gets a value indicating whether the result is a failure, including a <see langword="default" /> result.
+    /// </summary>
     public bool IsFailure => type == ResultType.Failure;
 
+    /// <summary>
+    /// Gets the case the result holds: the <see cref="Success" /> marker, or the <see cref="Results.Failure" />. It is
+    /// part of the <see cref="IUnion" /> pattern; pattern matching or <c>TryGetValue</c> is usually clearer.
+    /// </summary>
     public object? Value => IsSuccess ? Success.Instance : Failure;
 
     internal Failure Failure => failure ?? Failure.Uninitialized;
 
+    /// <summary>
+    /// Gets the success marker if the result is a success. Pattern matching on <see cref="Success" /> uses this.
+    /// </summary>
+    /// <param name="success">
+    /// The success marker, or <see langword="null" /> if this method returns <see langword="false" />.
+    /// </param>
+    /// <returns><see langword="true" /> if the result is a success.</returns>
     public bool TryGetValue([NotNullWhen(true)] out Success? success)
     {
         success = IsSuccess ? Success.Instance : null;
         return IsSuccess;
     }
 
+    /// <summary>
+    /// Gets the failure if the result is a failure. Pattern matching on <see cref="Results.Failure" /> uses this.
+    /// </summary>
+    /// <param name="failure">
+    /// The failure, <see cref="Failure.Uninitialized" /> for a <see langword="default" /> result, or
+    /// <see langword="null" /> if this method returns <see langword="false" />.
+    /// </param>
+    /// <returns><see langword="true" /> if the result is a failure.</returns>
     public bool TryGetValue([NotNullWhen(true)] out Failure? failure)
     {
         failure = IsFailure ? Failure : null;
@@ -67,6 +114,25 @@ public readonly record struct Result : IUnion
     }
 }
 
+/// <summary>
+/// The outcome of an operation that returns a value: a success holding a <typeparamref name="T" />, or a
+/// <see cref="Results.Failure" />.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Return a <typeparamref name="T" /> or a <see cref="Results.Failure" />; both convert to a <see cref="Result{T}" />
+/// implicitly. A <c>switch</c> over the cases <typeparamref name="T" /> and <see cref="Results.Failure" /> is exhaustive
+/// without a discard arm. A success value may be <see langword="null" /> when <typeparamref name="T" /> allows it; a
+/// <c>null</c> pattern matches it, and it is still a success.
+/// </para>
+/// <para>
+/// A <see langword="default" /> result is a failure carrying <see cref="Failure.Uninitialized" />.
+/// </para>
+/// </remarks>
+/// <typeparam name="T">
+/// The type of the success value. It must not be <see cref="Results.Failure" /> or derive from it, because a success
+/// value and a failure would then look the same; the <c>CSPP0001</c> analyzer reports this as an error.
+/// </typeparam>
 [Union]
 public readonly record struct Result<T> : IUnion
 {
@@ -77,6 +143,11 @@ public readonly record struct Result<T> : IUnion
     private readonly Result state;
     private readonly T value;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Result{T}" /> struct as a success holding
+    /// <paramref name="value" />. The implicit conversion from <typeparamref name="T" /> calls this constructor.
+    /// </summary>
+    /// <param name="value">The success value. May be <see langword="null" /> when <typeparamref name="T" /> allows it.</param>
     public Result(T value)
     {
         this.value = value;
@@ -108,8 +179,16 @@ public readonly record struct Result<T> : IUnion
     /// </summary>
     public bool IsSuccess => state.IsSuccess;
 
+    /// <summary>
+    /// Gets a value indicating whether the result is a failure, including a <see langword="default" /> result.
+    /// </summary>
     public bool IsFailure => state.IsFailure;
 
+    /// <summary>
+    /// Gets the case the result holds: the success value, or the <see cref="Results.Failure" />. It is part of the
+    /// <see cref="IUnion" /> pattern. It boxes a value type <typeparamref name="T" />, so pattern matching or
+    /// <c>TryGetValue</c>, which don't, are usually better.
+    /// </summary>
     public object? Value => IsSuccess ? value : state.Failure;
 
     internal Failure Failure => state.Failure;
@@ -132,6 +211,14 @@ public readonly record struct Result<T> : IUnion
         return IsSuccess && HasValue;
     }
 
+    /// <summary>
+    /// Gets the failure if the result is a failure. Pattern matching on <see cref="Results.Failure" /> uses this.
+    /// </summary>
+    /// <param name="failure">
+    /// The failure, <see cref="Failure.Uninitialized" /> for a <see langword="default" /> result, or
+    /// <see langword="null" /> if this method returns <see langword="false" />.
+    /// </param>
+    /// <returns><see langword="true" /> if the result is a failure.</returns>
     public bool TryGetValue([NotNullWhen(true)] out Failure? failure)
     {
         return state.TryGetValue(out failure);

@@ -14,6 +14,9 @@ namespace Cspp.Results.Analyzers;
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class MapReturnsFailureAnalyzer : DiagnosticAnalyzer
 {
+    /// <summary>
+    /// The ID of the diagnostic this analyzer reports, <c>CSPP0002</c>.
+    /// </summary>
     public const string DiagnosticId = "CSPP0002";
 
     private const string MapMethodName = "Map";
@@ -28,8 +31,10 @@ public sealed class MapReturnsFailureAnalyzer : DiagnosticAnalyzer
         isEnabledByDefault: true,
         description: "Map wraps the value its delegate returns in the success case. A Failure returned under a broader type such as object becomes a success holding a Failure, not a failure.");
 
+    /// <inheritdoc />
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
+    /// <inheritdoc />
     public override void Initialize(AnalysisContext context)
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
