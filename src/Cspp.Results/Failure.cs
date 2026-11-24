@@ -64,4 +64,17 @@ public record Failure
     /// Gets the error message, for people. Never <see langword="null" />, empty or whitespace.
     /// </summary>
     public string Error { get; }
+
+    /// <summary>
+    /// Describes the failure as <i>code</i><c>: </c><i>error</i>, for example
+    /// <c>Parse.Invalid: 'x' is not a number.</c>.
+    /// </summary>
+    /// <returns>The code and the error.</returns>
+    /// <remarks>
+    /// A record derived from <see cref="Failure" /> gets its own generated <c>ToString</c>, which lists its members.
+    /// </remarks>
+    public override string ToString()
+    {
+        return $"{Code}: {Error}";
+    }
 }
