@@ -123,6 +123,62 @@ public class ResultTests
     }
 
     [Test]
+    public void Equals_TwoSuccesses_ReturnsTrue()
+    {
+        Result first = Result.Success;
+        Result second = Result.Success;
+
+        Assert.That(first == second, Is.True);
+    }
+
+    [Test]
+    public void Equals_DifferentFailures_ReturnsFalse()
+    {
+        Result first = Failure.Unknown;
+        Result second = new Failure("Test.Code", "Test error");
+
+        Assert.That(first, Is.Not.EqualTo(second));
+    }
+
+    [Test]
+    public void Equals_SuccessAndFailure_ReturnsFalse()
+    {
+        Result success = Result.Success;
+        Result failure = Failure.Unknown;
+
+        Assert.That(success, Is.Not.EqualTo(failure));
+    }
+
+    [Test]
+    public void Equals_DefaultAndUninitializedFailure_ReturnsTrue()
+    {
+        Result uninitialized = Failure.Uninitialized;
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(default(Result), Is.EqualTo(uninitialized));
+            Assert.That(uninitialized == default, Is.True);
+        }
+    }
+
+    [Test]
+    public void GetHashCode_TwoSuccesses_ReturnsSameHash()
+    {
+        Result first = Result.Success;
+        Result second = Result.Success;
+
+        Assert.That(first.GetHashCode(), Is.EqualTo(second.GetHashCode()));
+    }
+
+    [Test]
+    public void GetHashCode_DefaultAndUninitializedFailure_ReturnsSameHash()
+    {
+        Result uninitialized = Failure.Uninitialized;
+
+        Assert.That(default(Result).GetHashCode(), Is.EqualTo(uninitialized.GetHashCode()));
+    }
+
+    [Test]
     public void PatternMatch_OnSuccess_DoesNotAllocate()
     {
         static int Run(int iterations)

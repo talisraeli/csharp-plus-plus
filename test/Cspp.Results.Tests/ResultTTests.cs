@@ -114,6 +114,71 @@ public class ResultTTests
     }
 
     [Test]
+    public void Equals_DifferentValues_ReturnsFalse()
+    {
+        Result<int> first = 42;
+        Result<int> second = 7;
+
+        Assert.That(first, Is.Not.EqualTo(second));
+    }
+
+    [Test]
+    public void Equals_SameFailure_ReturnsTrue()
+    {
+        Result<int> first = Failure.Unknown;
+        Result<int> second = Failure.Unknown;
+
+        Assert.That(first == second, Is.True);
+    }
+
+    [Test]
+    public void Equals_DifferentFailures_ReturnsFalse()
+    {
+        Result<int> first = Failure.Unknown;
+        Result<int> second = new Failure("Test.Code", "Test error");
+
+        Assert.That(first, Is.Not.EqualTo(second));
+    }
+
+    [Test]
+    public void Equals_SuccessAndFailure_ReturnsFalse()
+    {
+        Result<int> success = 0;
+        Result<int> failure = Failure.Unknown;
+
+        Assert.That(success, Is.Not.EqualTo(failure));
+    }
+
+    [Test]
+    public void Equals_DefaultAndUninitializedFailure_ReturnsTrue()
+    {
+        Result<int> uninitialized = Failure.Uninitialized;
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(default(Result<int>), Is.EqualTo(uninitialized));
+            Assert.That(uninitialized == default, Is.True);
+        }
+    }
+
+    [Test]
+    public void GetHashCode_SameValue_ReturnsSameHash()
+    {
+        Result<int> first = 42;
+        Result<int> second = 42;
+
+        Assert.That(first.GetHashCode(), Is.EqualTo(second.GetHashCode()));
+    }
+
+    [Test]
+    public void GetHashCode_DefaultAndUninitializedFailure_ReturnsSameHash()
+    {
+        Result<int> uninitialized = Failure.Uninitialized;
+
+        Assert.That(default(Result<int>).GetHashCode(), Is.EqualTo(uninitialized.GetHashCode()));
+    }
+
+    [Test]
     public void PatternMatch_OnSuccess_DoesNotAllocate()
     {
         static long Run(int iterations)
