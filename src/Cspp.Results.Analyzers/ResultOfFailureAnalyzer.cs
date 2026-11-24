@@ -17,6 +17,9 @@ namespace Cspp.Results.Analyzers;
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class ResultOfFailureAnalyzer : DiagnosticAnalyzer
 {
+    /// <summary>
+    /// The ID of the diagnostic this analyzer reports, <c>CSPP0001</c>.
+    /// </summary>
     public const string DiagnosticId = "CSPP0001";
 
     private static readonly DiagnosticDescriptor Rule = new(
@@ -28,8 +31,10 @@ public sealed class ResultOfFailureAnalyzer : DiagnosticAnalyzer
         isEnabledByDefault: true,
         description: "Result<T> uses Failure as its failure case, so a value type that is a Failure makes success and failure ambiguous.");
 
+    /// <inheritdoc />
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
+    /// <inheritdoc />
     public override void Initialize(AnalysisContext context)
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);

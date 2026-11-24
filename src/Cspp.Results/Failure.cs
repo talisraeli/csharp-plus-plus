@@ -2,12 +2,27 @@ using static System.String;
 
 namespace Cspp.Results;
 
+/// <summary>
+/// Why an operation failed: a <see cref="Code" /> for code to check and an <see cref="Error" /> message for people.
+/// </summary>
+/// <remarks>
+/// Two failures are equal when they have the same type, <see cref="Code" /> and <see cref="Error" />. Derive a record
+/// from <see cref="Failure" /> to carry more detail; a derived failure is still a failure, so it must not be the value
+/// type of a <see cref="Result{T}" /> (<c>CSPP0001</c>).
+/// </remarks>
 public record Failure
 {
+    /// <summary>
+    /// A failure with no more specific cause.
+    /// </summary>
     public static readonly Failure Unknown = new(
         Join(".", nameof(Failure), nameof(Unknown)),
         "Unknown failure.");
 
+    /// <summary>
+    /// The failure a <see langword="default" /> <see cref="Result" /> or <see cref="Result{T}" /> holds, because it
+    /// was never given a value or a failure.
+    /// </summary>
     public static readonly Failure Uninitialized = new(
         Join(".", nameof(Failure), nameof(Uninitialized)),
         "The result was not initialized with a value or a failure.");
@@ -39,7 +54,14 @@ public record Failure
         Error = error;
     }
 
+    /// <summary>
+    /// Gets the failure code, such as <c>Parse.Invalid</c>, for code to check. Never <see langword="null" />, empty or
+    /// whitespace.
+    /// </summary>
     public string Code { get; }
 
+    /// <summary>
+    /// Gets the error message, for people. Never <see langword="null" />, empty or whitespace.
+    /// </summary>
     public string Error { get; }
 }
