@@ -88,6 +88,8 @@ public class ResultOfFailureAnalyzerTests
     [TestCase("var result = WrapAsync(Failure.Unknown);")]
     [TestCase("var result = Result.Try(() => Failure.Unknown);")]
     [TestCase("var result = Result.TryAsync(() => Task.FromResult(Failure.Unknown));")]
+    [TestCase("var selected = from x in Wrap(1) select Failure.Unknown;")]
+    [TestCase("var combined = from x in Wrap(1) from y in Wrap(2) select Failure.Unknown;")]
     public async Task Analyze_GenericCallInferringResultOfFailure_ReportsDiagnostic(string statement)
     {
         ImmutableArray<Diagnostic> diagnostics = await AnalyzeStatementAsync(statement);
@@ -331,6 +333,7 @@ public class ResultOfFailureAnalyzerTests
     [TestCase("var empty = System.Linq.Enumerable.Empty<int>();")]
     [TestCase("var result = Result.Try(() => 1);")]
     [TestCase("var result = Result.TryAsync(() => Task.FromResult(1), _ => Failure.Unknown);")]
+    [TestCase("var combined = from x in Wrap(1) from y in Wrap(2) select x + y;")]
     public async Task Analyze_GenericCallNotInferringResultOfFailure_ReportsNothing(string statement)
     {
         ImmutableArray<Diagnostic> diagnostics = await AnalyzeStatementAsync(statement);

@@ -42,6 +42,9 @@ public class MapReturnsFailureAnalyzerTests
     [TestCase("var mapped = Wrap(1).MapAsync<int, object>(async _ => { await Task.Yield(); return Failure.Unknown; });", "Failure.Unknown")]
     [TestCase("var mapped = WrapAsync(1).Map<int, object>(_ => Failure.Unknown);", "Failure.Unknown")]
     [TestCase("var mapped = WrapAsync(1).MapAsync<int, object>(async _ => { await Task.Yield(); return GetFailure(); });", "GetFailure()")]
+    [TestCase("var selected = from x in Wrap(1) select (object)Failure.Unknown;", "Failure.Unknown")]
+    [TestCase("var selected = Wrap(1).Select<int, object>(_ => Failure.Unknown);", "Failure.Unknown")]
+    [TestCase("var combined = from x in Wrap(1) from y in Wrap(2) select (object)Failure.Unknown;", "Failure.Unknown")]
     public async Task Analyze_MapDelegateReturningFailure_ReportsAtReturnedExpression(string statement, string expected)
     {
         ImmutableArray<Diagnostic> diagnostics = await AnalyzeStatementAsync(statement);
@@ -95,6 +98,8 @@ public class MapReturnsFailureAnalyzerTests
     [TestCase("var mapped = Wrap(1).MapAsync(value => Task.FromResult<object>(value));")]
     [TestCase("var bound = Wrap(1).BindAsync<int, object>(_ => Task.FromResult<Result<object>>(Failure.Unknown));")]
     [TestCase("var matched = WrapAsync(1).Match<int, object>(value => value, failure => failure);")]
+    [TestCase("var combined = Wrap(1).SelectMany<int, int, object>(_ => Failure.Unknown, (x, y) => y);")]
+    [TestCase("var combined = from x in Wrap(1) from y in Wrap(2) select x + y;")]
     public async Task Analyze_MapNotReturningFailureAsValue_ReportsNothing(string statement)
     {
         ImmutableArray<Diagnostic> diagnostics = await AnalyzeStatementAsync(statement);

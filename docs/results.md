@@ -53,6 +53,21 @@ neither calls its delegate. `GetValueOrDefault()` without a default value return
 To fail from inside a step, use `Bind` and return the failure. Returning a `Failure` from `Map` is a compile error; see
 [Analyzers](analyzers.md).
 
+## Query syntax
+
+When a later step needs values from several earlier ones, nested `Bind` calls get deep. C# query syntax flattens them:
+
+```csharp
+Result<Order> order =
+    from id in Parse(text)
+    from customer in FindCustomer(id)  // Result<Customer> FindCustomer(int id)
+    from product in FindProduct(sku)   // Result<Product> FindProduct(string sku)
+    select new Order(customer, product);
+```
+
+Each `from` is a step that can fail, and the first failure ends the query. `let` works too. There is no `where`: a
+condition that doesn't hold has no failure to report, so use `Ensure` instead.
+
 ## Validating and combining results
 
 To check a condition on the success value, use `Ensure`. A success that fails the check becomes the failure you pass, or

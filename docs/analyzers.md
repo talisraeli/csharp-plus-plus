@@ -35,7 +35,9 @@ Result<object> mapped = result.Map<int, object>(_ => Failure.Unknown); // CSPP00
 
 To fail from inside a step, use `Bind` and return the failure as a `Result`.
 
-The check covers `Map` on `Result<T>`, on the non-generic `Result` and on a `Task<Result<T>>`, and `MapAsync`, where
-it looks at what an `async` lambda returns. It looks at lambdas and method groups passed to these members directly, by
+The check covers `Map` on `Result<T>`, on the non-generic `Result` and on a `Task<Result<T>>`, `MapAsync`, where it
+looks at what an `async` lambda returns, and query syntax: `Select`, which a `select` clause calls, and the result
+selector of `SelectMany`. `SelectMany`'s first delegate returns a `Result`, so returning a `Failure` there is a failed
+step and isn't reported. It looks at lambdas and method groups passed to these members directly, by
 the static type of what they return. It does not see a delegate stored in a variable first, or a `Failure` returned as
 `object`.
