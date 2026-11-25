@@ -1,12 +1,13 @@
 # Analyzers
 
 The `Cspp.Results` package includes a Roslyn analyzer, so these checks run in every project that references it without
-a separate package. Both report compile errors.
+a separate package. All of them report compile errors.
 
-| ID                                              | Reports                                                    |
-|-------------------------------------------------|------------------------------------------------------------|
-| [CSPP0001](#cspp0001-result-of-failure)         | A `Result<T>` whose `T` is `Failure` or derives from it.   |
-| [CSPP0002](#cspp0002-map-returns-a-failure)     | A `Map` delegate that returns a `Failure`.                 |
+| ID                                                          | Reports                                                        |
+|-------------------------------------------------------------|----------------------------------------------------------------|
+| [CSPP0001](#cspp0001-result-of-failure)                     | A `Result<T>` whose `T` is `Failure` or derives from it.       |
+| [CSPP0002](#cspp0002-map-returns-a-failure)                 | A `Map` delegate that returns a `Failure`.                     |
+| [CSPP0003](#cspp0003-a-failure-becomes-a-success-value)     | A `Failure` cast to a broader type, becoming a success value.  |
 
 ## CSPP0001: Result of Failure
 
@@ -49,3 +50,22 @@ selector of `SelectMany`. `SelectMany`'s first delegate returns a `Result`, so r
 step and isn't reported. It looks at lambdas and method groups passed to these members directly, by
 the static type of what they return. It does not see a delegate stored in a variable first, or a `Failure` returned as
 `object`.
+
+## CSPP0003: A Failure becomes a success value
+
+A `Failure` converts to the failure case of `Result<T>`. Cast to a broader type such as `object` first, it converts to
+the success case instead, so the result is a success holding a failure:
+
+```csharp
+Result<object> result = (object)Failure.Unknown;              // CSPP0003 compile error
+Result<object> created = new Result<object>((object)failure); // CSPP0003 compile error
+Result<object> failed = Failure.Unknown;                      // fine: a failure
+```
+
+Convert the `Failure` itself, without the cast. The check covers implicit conversions and the `Result<T>` constructor,
+wherever they are written: assignments, return values, lambdas such as a `Bind` step, and the branches of `?:`, `??` and
+`switch` expressions. It looks through casts that keep the same object.
+
+It only sees a value that is a `Failure` where the conversion is written. A value that reaches it typed as `object` or
+as a type parameter, such as one stored in an `object` variable first or passed through a generic helper like
+`Wrap<object>(Failure.Unknown)`, is out of its reach. When `T` is itself a `Failure`, CSPP0001 reports the type instead.
