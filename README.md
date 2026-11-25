@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/talisraeli/csharp-plus-plus/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/talisraeli/csharp-plus-plus/actions/workflows/ci.yml)
 [![NuGet](https://img.shields.io/nuget/v/Cspp.Results?logo=nuget)](https://www.nuget.org/packages/Cspp.Results)
+[![NuGet downloads](https://img.shields.io/nuget/dt/Cspp.Results?logo=nuget)](https://www.nuget.org/packages/Cspp.Results)
 
 Small building blocks that extend C# with patterns found in other languages.
 
