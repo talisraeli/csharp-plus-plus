@@ -39,7 +39,7 @@ A built-in analyzer turns misuse, such as `Result<Failure>`, into compile errors
 
 - [Cspp.Results](https://github.com/talisraeli/csharp-plus-plus/blob/main/docs/results.md): the types, matching, and
   chaining with `Map`, `Bind`, `Match` and `GetValueOrDefault`.
-- [Analyzers](https://github.com/talisraeli/csharp-plus-plus/blob/main/docs/analyzers.md): CSPP0001 and CSPP0002.
+- [Analyzers](https://github.com/talisraeli/csharp-plus-plus/blob/main/docs/analyzers.md): CSPP0001, CSPP0002 and CSPP0003.
 - [Benchmarks](https://github.com/talisraeli/csharp-plus-plus/blob/main/docs/benchmarks.md): performance compared with
   FluentResults, ErrorOr, CSharpFunctionalExtensions, OneOf, Ardalis.Result and exceptions.
 - [Development](https://github.com/talisraeli/csharp-plus-plus/blob/main/docs/development.md): building, testing and
