@@ -117,7 +117,7 @@ public sealed class MapReturnsFailureAnalyzer : DiagnosticAnalyzer
         {
             case IAnonymousFunctionOperation lambda:
                 return ReturnedValues(lambda.Body)
-                    .SelectMany(value => FailureValues(value, types))
+                    .SelectMany(value => FailureValues.Find(value, types))
                     .Select(value => (value, value.Type!));
             case IMethodReferenceOperation methodReference when types.IsFailure(methodReference.Method.ReturnType):
                 return [(methodReference, methodReference.Method.ReturnType)];
@@ -147,26 +147,6 @@ public sealed class MapReturnsFailureAnalyzer : DiagnosticAnalyzer
             {
                 yield return nested;
             }
-        }
-    }
-
-    // The parts of a returned value that can each become the returned object: the value itself, or the branches of a
-    // conditional, null-coalescing or switch expression, seen through casts that keep the same object.
-    private static IEnumerable<IOperation> FailureValues(IOperation value, ResultsTypes types)
-    {
-        switch (value)
-        {
-            case IConversionOperation { Conversion.IsUserDefined: false } conversion:
-                return FailureValues(conversion.Operand, types);
-            case IConditionalOperation conditional:
-                // A conditional expression, unlike an if statement, always has a false branch.
-                return FailureValues(conditional.WhenTrue, types).Concat(FailureValues(conditional.WhenFalse!, types));
-            case ICoalesceOperation coalesce:
-                return FailureValues(coalesce.Value, types).Concat(FailureValues(coalesce.WhenNull, types));
-            case ISwitchExpressionOperation switchExpression:
-                return switchExpression.Arms.SelectMany(arm => FailureValues(arm.Value, types));
-            default:
-                return value.Type is not null && types.IsFailure(value.Type) ? [value] : [];
         }
     }
 }
